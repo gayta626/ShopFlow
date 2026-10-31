@@ -1,0 +1,962 @@
+[
+  {
+    "day": 1,
+    "title": "Category: thuộc tính và mapping",
+    "goal": "Category có Name, NormalizedName, required/max 100 và unique index; build thành công. Chưa viết chức năng tạo/sửa.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-1-learn",
+        "title": "Hiểu vai trò hai trường tên",
+        "minutes": 45,
+        "description": "Name dùng hiển thị; NormalizedName dùng so sánh trùng. Chỉ cần hiểu mục đích ở bước này; chưa viết Trim/ToUpperInvariant, không cần tạo file bài tập riêng."
+      },
+      {
+        "id": "day-1-build",
+        "title": "Thêm thuộc tính và cấu hình Category",
+        "minutes": 90,
+        "description": "Entities/Category.cs: thêm NormalizedName. Data/ShopFlowDbContext.cs: cấu hình Name và NormalizedName required/max 100, unique index trên NormalizedName."
+      },
+      {
+        "id": "day-1-verify",
+        "title": "Kiểm tra code và build",
+        "minutes": 75,
+        "description": "Đọc lại Category.cs và mapping; chạy dotnet build ShopFlow.slnx --no-restore. Đạt khi build không lỗi, tên thuộc tính và index đúng. Chưa yêu cầu test API hoặc chống trùng ở bước này."
+      },
+      {
+        "id": "day-1-review",
+        "title": "Ghi tiến độ và chuyển sang migration",
+        "minutes": 30,
+        "description": "Ghi vào notes.md: entity/mapping đã xong, kết quả build; logic chuẩn hóa tên sẽ làm ở buổi Quản trị danh mục. Sau đó chuyển sang migration đầu tiên."
+      }
+    ]
+  },
+  {
+    "day": 2,
+    "title": "Migration đầu tiên: Categories",
+    "goal": "Tạo InitialCreate, áp dụng vào PostgreSQL trong Docker và kiểm tra bảng Categories.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-2-learn",
+        "title": "Chuẩn bị EF và hiểu kết nối",
+        "minutes": 45,
+        "description": "Kiểm tra dotnet ef và package Microsoft.EntityFrameworkCore.Design (hỗ trợ công cụ tạo migration từ DbContext). EF chạy trên Windows dùng localhost:5433; API trong Docker dùng db:5432. Cùng một database."
+      },
+      {
+        "id": "day-2-build",
+        "title": "Tạo và đọc InitialCreate",
+        "minutes": 90,
+        "description": "Từ gốc ShopFlow: dotnet ef migrations add InitialCreate --project src/ShopFlow.Api. Nếu đã có thì không tạo lại. Đọc Up/Down: bảng Categories, hai cột varchar(100) NOT NULL và unique index."
+      },
+      {
+        "id": "day-2-verify",
+        "title": "Áp dụng và kiểm tra migration",
+        "minutes": 75,
+        "description": "Theo docs/migration-guide.md: khởi động db bằng Compose, đặt connection string trong cùng cửa sổ CMD, chạy database update rồi migrations list. Kiểm tra bảng/index trong PostgreSQL; chưa yêu cầu viết API hoặc test chuẩn hóa tên."
+      },
+      {
+        "id": "day-2-review",
+        "title": "Ghi kết quả database và sang Product",
+        "minutes": 30,
+        "description": "Ghi rõ migration đã tạo, kết quả áp dụng và kiểm tra thực tế. Phân biệt build thành công với database update thành công; không tính việc chỉ có file migration là đã tạo bảng."
+      }
+    ]
+  },
+  {
+    "day": 3,
+    "title": "Product: entity, enum và navigation",
+    "goal": "Product có đầy đủ thuộc tính theo spec, hai enum, navigation hai chiều và DbSet; chưa tạo migration trước khi hoàn thiện mapping.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-3-learn",
+        "title": "Hiểu thuộc tính và enum Product",
+        "minutes": 45,
+        "description": "Đọc các trường Product: SKU, giá decimal, tồn long, RowVersion uint; SwitchType phân loại switch, Connectivity dùng Flags 1/2/4, IsHotSwappable bool? cho thông tin chưa rõ."
+      },
+      {
+        "id": "day-3-build",
+        "title": "Tạo Product và hai enum",
+        "minutes": 90,
+        "description": "Entities/Product.cs, SwitchType.cs, Connectivity.cs: thêm các thuộc tính theo spec; chuỗi khởi tạo rỗng, IsActive=true, CreatedAt=UTC. Trợ lý có thể viết phần lặp lại khi bạn yêu cầu."
+      },
+      {
+        "id": "day-3-verify",
+        "title": "Thêm navigation và DbSet",
+        "minutes": 75,
+        "description": "Product: CategoryId và Category = null!; Category: ICollection<Product> Products khởi tạo danh sách; DbContext: DbSet<Product> Products. CategoryId là khóa ngoại, navigation là tham chiếu đối tượng."
+      },
+      {
+        "id": "day-3-review",
+        "title": "Kiểm tra entity rồi sang mapping",
+        "minutes": 30,
+        "description": "Lưu tất cả file, đối chiếu thuộc tính/enum/nullable và build. Chưa tạo AddProducts ở đây; tiếp tục cấu hình các ràng buộc và quan hệ trong OnModelCreating."
+      }
+    ]
+  },
+  {
+    "day": 4,
+    "title": "Product: mapping, migration và dữ liệu mẫu",
+    "goal": "Mapping Product và FK Restrict đúng; AddProducts được áp dụng; sau đó mới tạo dữ liệu mẫu và kiểm tra các ràng buộc.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-4-learn",
+        "title": "Mapping cột, index và check constraint",
+        "minutes": 45,
+        "description": "Trong OnModelCreating: độ dài chuỗi, enum SwitchType lưu chữ, Connectivity lưu số, Price numeric(18,2), Stock bigint, RowVersion dùng xmin; unique SKU và check giá/tồn/enum. Trợ lý đã viết phần lặp lại theo yêu cầu."
+      },
+      {
+        "id": "day-4-build",
+        "title": "Tự cấu hình Foreign Key và build",
+        "minutes": 90,
+        "description": "HasOne(Product.Category) → WithMany(Category.Products) → HasForeignKey(CategoryId) → OnDelete(DeleteBehavior.Restrict). Bỏ cấu hình thừa, thêm dấu ; và Category = null!; build 0 warning/0 error trước migration."
+      },
+      {
+        "id": "day-4-verify",
+        "title": "Tạo, đọc và áp dụng AddProducts",
+        "minutes": 75,
+        "description": "dotnet ef migrations add AddProducts --project src/ShopFlow.Api. Đọc FK tới Categories.Id với Restrict, unique SKU và checks; áp dụng database update theo docs/migration-guide.md, kiểm tra migrations list và bảng Products."
+      },
+      {
+        "id": "day-4-review",
+        "title": "Dữ liệu mẫu và kiểm chứng catalog",
+        "minutes": 30,
+        "description": "Bước tiếp sau AddProducts: cùng trợ lý chuẩn bị seed Category/SKU và cách chạy lại không nhân bản. Kiểm tra dữ liệu, FK, SKU trùng, giá/tồn; ghi bằng chứng vào notes. Chỉ xác nhận mục này khi seed và kiểm chứng đã thực hiện."
+      }
+    ]
+  },
+  {
+    "day": 5,
+    "title": "Users và cấu hình auth",
+    "goal": "Có User, unique email chuẩn hóa và cấu hình auth qua secret.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-5-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu password hash, JWT, role; đọc hợp đồng auth trong spec."
+      },
+      {
+        "id": "day-5-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Tạo User/mapping; migration; cấu hình các tham số JWT qua environment/secret."
+      },
+      {
+        "id": "day-5-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Build và kiểm tra schema; chắc chắn password/token secret không nằm trong mã nguồn hoặc log."
+      },
+      {
+        "id": "day-5-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có User, unique email chuẩn hóa và cấu hình auth qua secret."
+      }
+    ]
+  },
+  {
+    "day": 6,
+    "title": "Đăng ký tài khoản",
+    "goal": "POST /auth/register tạo Customer và không trả password hash.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-6-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Phân biệt DTO với entity; hiểu Controller–Service–Repository và validation."
+      },
+      {
+        "id": "day-6-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết register DTO, repository và service; chuẩn hóa email, hash password, tạo tài khoản Customer."
+      },
+      {
+        "id": "day-6-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Thử đăng ký hợp lệ, email trùng, input sai; kiểm tra response và dữ liệu hash trong DB."
+      },
+      {
+        "id": "day-6-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: POST /auth/register tạo Customer và không trả password hash."
+      }
+    ]
+  },
+  {
+    "day": 7,
+    "title": "Đăng nhập JWT",
+    "goal": "Đăng nhập đúng nhận token; sai thông tin bị từ chối.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-7-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu claims, chữ ký, issuer/audience và thời hạn JWT."
+      },
+      {
+        "id": "day-7-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết login service/controller, kiểm tra password hash và sinh token."
+      },
+      {
+        "id": "day-7-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Thử đúng/sai mật khẩu, email không tồn tại; kiểm tra token expiry và không lộ thông tin nhạy cảm."
+      },
+      {
+        "id": "day-7-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Đăng nhập đúng nhận token; sai thông tin bị từ chối."
+      }
+    ]
+  },
+  {
+    "day": 8,
+    "title": "Phân quyền và ôn tập",
+    "goal": "Phân biệt được 401/403 và có /auth/me chạy đúng.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-8-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Ôn middleware authentication/authorization và Admin–Customer."
+      },
+      {
+        "id": "day-8-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Đăng ký middleware; làm /auth/me; tạo Admin demo bằng cơ chế seed phù hợp."
+      },
+      {
+        "id": "day-8-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test không token/token hết hạn/Customer vào Admin; sửa lỗi auth và catalog còn tồn từ tuần đầu."
+      },
+      {
+        "id": "day-8-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Phân biệt được 401/403 và có /auth/me chạy đúng."
+      }
+    ]
+  },
+  {
+    "day": 9,
+    "title": "Đọc danh mục",
+    "goal": "GET /categories đi qua Controller–Service–Repository và trả DTO.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-9-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu dependency injection, async/await và AsNoTracking cho truy vấn."
+      },
+      {
+        "id": "day-9-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết repository/service/controller danh mục và DTO; xử lý hủy request."
+      },
+      {
+        "id": "day-9-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Thử có dữ liệu/rỗng; response chỉ có trường công khai; tự giải thích luồng HTTP → database."
+      },
+      {
+        "id": "day-9-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: GET /categories đi qua Controller–Service–Repository và trả DTO."
+      }
+    ]
+  },
+  {
+    "day": 10,
+    "title": "Quản trị danh mục",
+    "goal": "Admin thêm/sửa/xóa danh mục, chặn trùng tên và danh mục đang được dùng.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-10-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Đọc quy tắc NormalizedName, khóa layout đã có Product, trả 409."
+      },
+      {
+        "id": "day-10-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Trong Services/CategoryService.cs khi viết tạo/sửa: Name = input.Trim(), NormalizedName = Name.ToUpperInvariant(); từ chối tên rỗng sau trim và quá dài. Viết CRUD Admin, xử lý unique/FK conflict và transaction theo spec. Đây là bước triển khai chuẩn hóa thực tế, không làm trong entity hoặc OnModelCreating."
+      },
+      {
+        "id": "day-10-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test TKL/tkl/khoảng trắng, tên rỗng/quá dài, đổi/xóa danh mục có sản phẩm và sai role."
+      },
+      {
+        "id": "day-10-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Admin thêm/sửa/xóa danh mục, chặn trùng tên và danh mục đang được dùng."
+      }
+    ]
+  },
+  {
+    "day": 11,
+    "title": "Danh sách và chi tiết sản phẩm",
+    "goal": "Khách xem được SKU active; SKU inactive trả 404.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-11-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Đọc DTO công khai, sort mặc định và phân trang ổn định."
+      },
+      {
+        "id": "day-11-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết GET /products và /products/{id}, DTO và mapping; lọc IsActive."
+      },
+      {
+        "id": "day-11-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Kiểm tra active/inactive/hết hàng/id sai; response không lộ dữ liệu nội bộ."
+      },
+      {
+        "id": "day-11-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Khách xem được SKU active; SKU inactive trả 404."
+      }
+    ]
+  },
+  {
+    "day": 12,
+    "title": "Lọc, tìm kiếm và phân trang",
+    "goal": "API lọc sản phẩm đúng và từ chối bộ lọc không hợp lệ.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-12-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu IQueryable, thứ tự filter/sort/page và giới hạn Contains."
+      },
+      {
+        "id": "day-12-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Thêm q, category, switch, connectivity, khoảng giá, sort và page/size theo spec."
+      },
+      {
+        "id": "day-12-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test kết hợp bộ lọc, trang rỗng, sort sai, min>max; xác minh thứ tự ổn định."
+      },
+      {
+        "id": "day-12-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: API lọc sản phẩm đúng và từ chối bộ lọc không hợp lệ."
+      }
+    ]
+  },
+  {
+    "day": 13,
+    "title": "Admin tạo sản phẩm",
+    "goal": "Admin tạo SKU hợp lệ; input sai/trùng bị từ chối.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-13-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Ôn quy tắc SKU, giá VND, tồn kho và CategoryId."
+      },
+      {
+        "id": "day-13-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết create DTO/validation/service/endpoint; chuẩn hóa SKU và xử lý unique conflict."
+      },
+      {
+        "id": "day-13-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test SKU trùng, category thiếu, enum sai, giá/tồn ngoài giới hạn; kiểm tra Location và status 201."
+      },
+      {
+        "id": "day-13-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Admin tạo SKU hợp lệ; input sai/trùng bị từ chối."
+      }
+    ]
+  },
+  {
+    "day": 14,
+    "title": "Admin cập nhật và concurrency",
+    "goal": "Update dùng RowVersion; ngừng bán không xóa lịch sử.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-14-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu optimistic concurrency và quy tắc khóa cấu hình SKU khi có đơn."
+      },
+      {
+        "id": "day-14-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết update, soft delete, kích hoạt lại và xử lý DbUpdateConcurrencyException."
+      },
+      {
+        "id": "day-14-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test hai request dùng cùng version; giá/tồn cập nhật đúng, bản cũ trả 409; test inactive."
+      },
+      {
+        "id": "day-14-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Update dùng RowVersion; ngừng bán không xóa lịch sử."
+      }
+    ]
+  },
+  {
+    "day": 15,
+    "title": "Ngày đệm: kiểm chứng catalog",
+    "goal": "Catalog/auth có bộ kiểm thử lặp lại được, lỗi tồn được xử lý.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-15-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Rà soát phần chưa hiểu và lập danh sách lỗi từ ngày 1–14."
+      },
+      {
+        "id": "day-15-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Bổ sung integration tests cho auth/catalog quan trọng; sửa lỗi đã phát hiện."
+      },
+      {
+        "id": "day-15-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Chạy test trên PostgreSQL; thử dữ liệu giữ nguyên sau tạo lại container, ghi kết quả thực tế."
+      },
+      {
+        "id": "day-15-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Catalog/auth có bộ kiểm thử lặp lại được, lỗi tồn được xử lý."
+      }
+    ]
+  },
+  {
+    "day": 16,
+    "title": "Schema giỏ hàng",
+    "goal": "Có Cart, CartItem và constraint chống trùng dòng sản phẩm.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-16-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Đọc quan hệ User–Cart, Cart–CartItem và Cart.Revision trong spec."
+      },
+      {
+        "id": "day-16-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Tạo entity/mapping/migration; unique theo user và cart/product; cấu hình revision concurrency."
+      },
+      {
+        "id": "day-16-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Áp dụng migration; kiểm tra FK/index và constraint; build, đối chiếu schema."
+      },
+      {
+        "id": "day-16-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có Cart, CartItem và constraint chống trùng dòng sản phẩm."
+      }
+    ]
+  },
+  {
+    "day": 17,
+    "title": "Xem và thêm giỏ hàng",
+    "goal": "Customer chỉ đọc/thêm vào giỏ của chính mình.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-17-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu lấy UserId từ token và kiểm tra quyền sở hữu."
+      },
+      {
+        "id": "day-17-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết GET cart và thêm sản phẩm; xử lý sản phẩm inactive, số lượng và giới hạn giỏ."
+      },
+      {
+        "id": "day-17-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test thêm lần đầu/thêm lại, số lượng sai, inactive và user khác; kiểm tra revision."
+      },
+      {
+        "id": "day-17-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Customer chỉ đọc/thêm vào giỏ của chính mình."
+      }
+    ]
+  },
+  {
+    "day": 18,
+    "title": "Sửa, xóa và kiểm thử giỏ",
+    "goal": "Sửa/xóa giỏ đúng, tranh chấp revision không ghi đè âm thầm.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-18-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Ôn concurrency của cart và hợp đồng response theo spec."
+      },
+      {
+        "id": "day-18-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết cập nhật/xóa item; thống nhất xử lý lỗi và response DTO."
+      },
+      {
+        "id": "day-18-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test nhiều thao tác trên cùng giỏ, xóa lặp, product hết hàng; bổ sung test cho ownership."
+      },
+      {
+        "id": "day-18-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Sửa/xóa giỏ đúng, tranh chấp revision không ghi đè âm thầm."
+      }
+    ]
+  },
+  {
+    "day": 19,
+    "title": "Schema đơn hàng",
+    "goal": "Có Orders, OrderItems và snapshot dữ liệu sản phẩm.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-19-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu vì sao đơn lưu tên/SKU/giá tại thời điểm mua và không cascade mất lịch sử."
+      },
+      {
+        "id": "day-19-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Tạo entity/mapping/migration cho order; trạng thái, tổng tiền, FK và snapshot theo spec."
+      },
+      {
+        "id": "day-19-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Kiểm tra schema, kiểu tiền, precision, delete restrict; build và xác nhận 7 bảng nghiệp vụ."
+      },
+      {
+        "id": "day-19-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có Orders, OrderItems và snapshot dữ liệu sản phẩm."
+      }
+    ]
+  },
+  {
+    "day": 20,
+    "title": "Checkout: luồng thành công",
+    "goal": "Checkout tạo đơn và trừ tồn trong cùng transaction.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-20-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Vẽ các bước kiểm tra giỏ, giá/tồn, tạo snapshot và lưu đơn."
+      },
+      {
+        "id": "day-20-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết checkout service và endpoint; dùng giá từ database, không tin tổng tiền client."
+      },
+      {
+        "id": "day-20-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test giỏ hợp lệ/giỏ rỗng; kiểm tra tổng tiền, snapshot, tồn kho và trạng thái sau mua."
+      },
+      {
+        "id": "day-20-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Checkout tạo đơn và trừ tồn trong cùng transaction."
+      }
+    ]
+  },
+  {
+    "day": 21,
+    "title": "Checkout: lỗi và đồng thời",
+    "goal": "Không bán vượt tồn, lỗi rollback toàn bộ.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-21-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Đọc transaction/concurrency/retry và invariant tồn kho trong spec."
+      },
+      {
+        "id": "day-21-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Hoàn thiện xử lý cạnh tranh tồn kho và cart revision; lỗi nhất quán."
+      },
+      {
+        "id": "day-21-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test hai người mua SKU cuối, sản phẩm inactive, thay đổi giỏ; xác nhận không tạo đơn dở dang."
+      },
+      {
+        "id": "day-21-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Không bán vượt tồn, lỗi rollback toàn bộ."
+      }
+    ]
+  },
+  {
+    "day": 22,
+    "title": "Vòng đời và hủy đơn",
+    "goal": "Customer/Admin chỉ đổi trạng thái hợp lệ và hoàn kho đúng một lần.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-22-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Lập bảng Pending/Paid/canceled theo spec và quyền mỗi role."
+      },
+      {
+        "id": "day-22-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết đọc đơn, thanh toán mô phỏng, hủy đơn và hoàn kho trong transaction."
+      },
+      {
+        "id": "day-22-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test hủy lặp/hủy đồng thời/trạng thái không hợp lệ/user khác; kiểm tra tồn và dữ liệu đơn."
+      },
+      {
+        "id": "day-22-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Customer/Admin chỉ đổi trạng thái hợp lệ và hoàn kho đúng một lần."
+      }
+    ]
+  },
+  {
+    "day": 23,
+    "title": "Ngày đệm: kiểm thử mua hàng",
+    "goal": "Luồng mua–thanh toán–hủy có bằng chứng kiểm thử.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-23-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Lập ma trận tình huống cart/checkout/order theo spec."
+      },
+      {
+        "id": "day-23-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết các integration tests còn thiếu và sửa lỗi transaction/concurrency."
+      },
+      {
+        "id": "day-23-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Chạy kịch bản nhiều khách đồng thời; đối chiếu tồn/đơn, ghi kết quả thật và các lỗi còn lại."
+      },
+      {
+        "id": "day-23-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Luồng mua–thanh toán–hủy có bằng chứng kiểm thử."
+      }
+    ]
+  },
+  {
+    "day": 24,
+    "title": "React: khung và catalog",
+    "goal": "Có trang danh sách/chi tiết sản phẩm gọi API thật.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-24-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Thống nhất luồng màn hình, routing và cấu hình API; trợ lý hỗ trợ viết frontend."
+      },
+      {
+        "id": "day-24-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Dựng React, layout, danh sách/chi tiết; trạng thái loading, empty và error."
+      },
+      {
+        "id": "day-24-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Thử bộ lọc/phân trang trên giao diện, mobile và API lỗi; bạn giải thích request/response."
+      },
+      {
+        "id": "day-24-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có trang danh sách/chi tiết sản phẩm gọi API thật."
+      }
+    ]
+  },
+  {
+    "day": 25,
+    "title": "React: đăng nhập và mua hàng",
+    "goal": "Người dùng thao tác giỏ/checkout và xem đơn từ giao diện.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-25-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Thống nhất quản lý phiên đăng nhập và lỗi 401/403."
+      },
+      {
+        "id": "day-25-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Nối login/register, cart, checkout và lịch sử đơn với API."
+      },
+      {
+        "id": "day-25-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test mua hàng trọn luồng, refresh trang, hết phiên, hết tồn; kiểm tra thông báo lỗi rõ ràng."
+      },
+      {
+        "id": "day-25-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Người dùng thao tác giỏ/checkout và xem đơn từ giao diện."
+      }
+    ]
+  },
+  {
+    "day": 26,
+    "title": "React: quản trị",
+    "goal": "Admin quản lý catalog và đơn hàng từ giao diện.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-26-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Chốt form dữ liệu và cách hiển thị lỗi validation/concurrency."
+      },
+      {
+        "id": "day-26-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Nối CRUD danh mục/sản phẩm và thao tác đơn; phân biệt giao diện Admin/Customer."
+      },
+      {
+        "id": "day-26-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Test form sai, SKU trùng, version cũ và không đủ quyền; kiểm tra API vẫn tự bảo vệ quyền."
+      },
+      {
+        "id": "day-26-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Admin quản lý catalog và đơn hàng từ giao diện."
+      }
+    ]
+  },
+  {
+    "day": 27,
+    "title": "Chatbot tư vấn catalog",
+    "goal": "Chatbot trả lời từ catalog/chính sách và không thực hiện thao tác ghi.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-27-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Chọn provider/SDK, ngân sách và giới hạn; nếu chưa có key, làm mock và ghi rõ chưa tích hợp thật."
+      },
+      {
+        "id": "day-27-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Tích hợp đọc catalog/chính sách, tool chỉ đọc, timeout và giới hạn request; UI chat."
+      },
+      {
+        "id": "day-27-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Thử câu hỏi có/không có dữ liệu, yêu cầu đặt/hủy đơn, prompt injection; không đoán giá/tồn."
+      },
+      {
+        "id": "day-27-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Chatbot trả lời từ catalog/chính sách và không thực hiện thao tác ghi."
+      }
+    ]
+  },
+  {
+    "day": 28,
+    "title": "Kiểm thử tổng hợp và sửa lỗi",
+    "goal": "Có báo cáo các kịch bản đã pass/fail, không tính mục tiêu thành kết quả.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-28-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Rà checklist spec: 20 integration scenarios, 20 câu hỏi AI và 10 khách đồng thời."
+      },
+      {
+        "id": "day-28-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Chạy kịch bản chưa kiểm chứng; ưu tiên sửa lỗi mất dữ liệu, phân quyền và tồn kho."
+      },
+      {
+        "id": "day-28-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Chạy lại các test bị ảnh hưởng; test frontend, chatbot và log; ghi rõ phần chưa hoàn thành."
+      },
+      {
+        "id": "day-28-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có báo cáo các kịch bản đã pass/fail, không tính mục tiêu thành kết quả."
+      }
+    ]
+  },
+  {
+    "day": 29,
+    "title": "Đóng gói, backup và CI",
+    "goal": "Build đầy đủ, có backup/restore đã thử và CI cơ bản.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-29-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Hiểu React wwwroot, container API, DB volume và quản lý secret."
+      },
+      {
+        "id": "day-29-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Đóng gói React vào API; cấu hình CI build/test; viết quy trình backup/restore."
+      },
+      {
+        "id": "day-29-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Khởi động Compose từ image mới; backup và restore vào database thử riêng; kiểm tra dữ liệu."
+      },
+      {
+        "id": "day-29-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Build đầy đủ, có backup/restore đã thử và CI cơ bản."
+      }
+    ]
+  },
+  {
+    "day": 30,
+    "title": "Demo và bàn giao",
+    "goal": "Demo được luồng chính; README phản ánh đúng trạng thái thực tế.",
+    "minutes": 240,
+    "blocks": [
+      {
+        "id": "day-30-learn",
+        "title": "Hiểu bài và chuẩn bị",
+        "minutes": 45,
+        "description": "Rà danh sách còn thiếu; chọn phần đủ ổn để demo, dời việc chưa xong có ghi nhận."
+      },
+      {
+        "id": "day-30-build",
+        "title": "Thực hành",
+        "minutes": 90,
+        "description": "Viết README setup/API/kiểm thử; chuẩn bị tài khoản và dữ liệu demo; deploy nếu đã có môi trường."
+      },
+      {
+        "id": "day-30-verify",
+        "title": "Kiểm chứng và sửa lỗi",
+        "minutes": 75,
+        "description": "Demo mua–thanh toán–hủy, quản trị, chatbot; ghi giới hạn và backlog. Nếu lỗi còn nhiều, dùng buổi này sửa lỗi."
+      },
+      {
+        "id": "day-30-review",
+        "title": "Tổng kết",
+        "minutes": 30,
+        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Demo được luồng chính; README phản ánh đúng trạng thái thực tế."
+      }
+    ]
+  }
+]
