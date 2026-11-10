@@ -22,6 +22,31 @@ namespace ShopFlow.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ShopFlow.Api.Entities.Cart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Carts", (string)null);
+                });
+
             modelBuilder.Entity("ShopFlow.Api.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -184,6 +209,17 @@ namespace ShopFlow.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ShopFlow.Api.Entities.Cart", b =>
+                {
+                    b.HasOne("ShopFlow.Api.Entities.User", "User")
+                        .WithOne("Cart")
+                        .HasForeignKey("ShopFlow.Api.Entities.Cart", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ShopFlow.Api.Entities.Product", b =>
                 {
                     b.HasOne("ShopFlow.Api.Entities.Category", "Category")
@@ -198,6 +234,11 @@ namespace ShopFlow.Api.Migrations
             modelBuilder.Entity("ShopFlow.Api.Entities.Category", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("ShopFlow.Api.Entities.User", b =>
+                {
+                    b.Navigation("Cart");
                 });
 #pragma warning restore 612, 618
         }

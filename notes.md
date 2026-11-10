@@ -1,187 +1,284 @@
 # ShopFlow — Tiến độ và bàn giao
 
-Cập nhật: 31/10/2026 (Asia/Saigon), bàn giao phiên học EF Core và tạo công cụ tiến độ cá nhân.
+Cập nhật nội dung tiến độ: 10/11/2026 (Asia/Saigon).
+
+Quy tắc làm việc đã được tách sang [AGENTS.md](AGENTS.md) ngày 10/11/2026. File này giữ tiến độ, bằng chứng và lịch sử bàn giao; các hướng dẫn theo phiên cũ bên dưới chỉ là bối cảnh lịch sử.
+
+## Kết phiên 10/11 — mới nhất: bộ lọc và PUT đã có, tiếp theo ngừng bán sản phẩm
+
+- Đã đọc code đã lưu: ProductQueryRequest và bộ lọc public Q/categoryId/giá/switch/connectivity/sort; PUT Admin nối UpdateProductRequest -> UpdateAsync -> repository tracking, SKU loại trừ ID, OriginalRowVersion, lưu/map. DTO implement IValidatableObject, RowVersion nullable/Required. Repository chuyển DbUpdateConcurrencyException thành ProductConcurrencyException; controller trả409/CONCURRENCY_CONFLICT. SetOriginalRowVersion buộc UPDATE bằng Name IsModified kể cả body không đổi.
+- Sau hướng dẫn body PUT và gửi lại phiên bản cũ, người dùng nói “test được rồi”. Ghi nhận xác nhận chung của người dùng; chưa có response/ảnh riêng xác nhận cả200 và409, không coi mọi case đã pass. Các case PUT thiếuID, SKU trùng, danh mục thiếu, validation, đổi danh mục, inactive/kích hoạt lại và concurrency độc lập chưa được kiểm chứng đầy đủ.
+- Catalog: người dùng xác nhận bộ case Q/categoryId đã giao đúng; giá/sort có xác nhận chung. Switch/connectivity và các biên chưa có xác nhận riêng. Không chạy lại unit/integration hoặc HTTP trong lượt kết phiên; kết quả test auth/category trước đây là lịch sử.
+- Build cuối phiên mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công 0 warning/0 error. Không sửa backend, migration hoặc commit trong lượt kết phiên.
+- Đã cập nhật nội dung learning-plan buổi12–14, giữ30 buổi/120 ID. Buổi12 học/thực hành đã có đủ nội dung, kiểm chứng còn dở; buổi14 đã học RowVersion và có PUT, thực hành còn DELETE/khóa cấu hình khi có OrderItem. Không tick trọn buổi14 chỉ vì PUT đã có.
+- Đã cập nhật và đọc lại PersonalProgress: day-12-learn/build và day-14-learn/review được tick; day-12-verify, day-14-build/verify vẫn false. Tổng48/120 mục (40%). Đối chiếu giữ nguyên trạng thái/timestamp các mục khác; web đọc được nội dung kế hoạch mới, không rebuild tracker hoặc thay volume.
+- Phiên sau: hướng dẫn DELETE /api/admin/products/{id} để ngừng bán bằng IsActive=false, không xóa vật lý; thống nhất cách dùng RowVersion cho thao tác này theo spec trước khi viết. Sau đó kiểm tra public không thấy/inactive chi tiết404, Admin vẫn đọc, PUT kích hoạt lại. Người dùng tự viết mặc định; không mở rộng quyền viết hộ các bước trước sang bước mới. Khóa cấu hình sau OrderItem sẽ bổ sung khi có schema đơn hàng.
+- Còn hợp đồng DTO public trong spec ghi isActive/createdAt nhưng code public bỏ hai trường; cần thống nhất trước khi chốt API. Namespace UpdateProductRequest hiện ShopFlow.Api.Products, khác các DTO khác; không tự refactor khi kết phiên.
+
+## Cập nhật 10/11 — đã nối PUT sản phẩm, chờ kiểm thử HTTP
+
+- Theo yêu cầu làm phần5, trợ lý thêm ProductConcurrencyException; SaveChangAsync bắt DbUpdateConcurrencyException trước DbUpdateException và chuyển thành lỗi nghiệp vụ. AdminProductsController có PUT /api/admin/products/{id:int}, kế thừa quyền Admin: thành công200, thiếu404, SKU trùng409/SKU_EXISTS, xung đột409/CONCURRENCY_CONFLICT, danh mục thiếu400/CATEGORY_NOT_FOUND, input sai400.
+- SetOriginalRowVersion đánh dấu Name IsModified để PUT luôn thực thi UPDATE kiểm tra phiên bản tại database ngay cả khi dữ liệu gửi không đổi; không chỉ dựa vào so sánh RowVersion trong service. PUT không đổi dữ liệu cũng có thể nhận RowVersion mới.
+- Build mới ngoài sandbox thành công 0 warning/0 error. Chưa chạy HTTP/unit/integration cho PUT/concurrency; cần GET lấy RowVersion, PUT hợp lệ, gửi lại phiên bản cũ (kể cả body không đổi), validation/404/SKU trùng/danh mục thiếu. Quy tắc khóa cấu hình khi có OrderItem vẫn chưa triển khai vì chưa có OrderItem. Không commit.
+
+## Cập nhật 10/11 — đã viết service UpdateAsync, PUT chưa hoàn tất
+
+- Theo yêu cầu người dùng, trợ lý hoàn thiện ProductsService.UpdateAsync trả AdminProductResponse? (không phải DTO danh sách): lấy entity tracking/thiếu trảnull, validation DTO, chuẩn hóa, kiểm tra danh mục/SKU loại trừ ID hiện tại, gộp connectivity, đặt OriginalRowVersion, gán thông tin và tồn tuyệt đối, SaveChangAsync/map response.
+- Sửa hai điểm cần thiết trong UpdateProductRequest: implement IValidatableObject để Validate được thực thi; RowVersion thành uint? với Required để phát hiện thiếu phiên bản. Giữ namespace hiện có ShopFlow.Api.Products. Có comment giải thích luồng học.
+- Build mới ngoài sandbox thành công 0 warning/0 error. Chưa chạy HTTP/unit/integration cho UpdateAsync. Chưa thêm PUT controller hoặc chuyển DbUpdateConcurrencyException thành lỗi nghiệp vụ/409 trong lượt này; quy tắc khóa cấu hình sau OrderItem chưa triển khai (chưa có OrderItem). Cần kiểm chứng cả request không thay đổi dữ liệu với RowVersion cũ khi hoàn thiện concurrency. Không commit.
+
+## Cập nhật 10/11 — đang học cập nhật sản phẩm
+
+- Người dùng đã viết GetByIdForUpdateAsync có tracking/Include(Category)/FirstOrDefaultAsync và IsSkuExited kiểm tra SKU với Id khác sản phẩm đang sửa. Interface đã khai báo SetOriginalRowVersion.
+- Theo yêu cầu chỉ viết hàm này, trợ lý thêm SetOriginalRowVersion vào ProductRepository: đặt Entry(product).Property(p => p.RowVersion).OriginalValue bằng phiên bản khách gửi. Chưa nối service/controller hoặc xử lý exception cập nhật trong lượt này; không coi PUT đã hoàn thành.
+- Build mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công 0 warning/0 error. Chưa kiểm thử concurrency/database cho cập nhật sản phẩm. Không commit.
+
+## Cập nhật 10/11 — đã triển khai lọc switch/kết nối
+
+- Người dùng yêu cầu trợ lý làm các phần lọc còn lại. Đã thêm SwitchType?/Connectivity? vào ProductQueryRequest, truyền xuyên service/interface/repository cho cả đếm và lấy trang. BuildActiveQuery so bằng SwitchType và dùng HasFlag cho Connectivity, kết hợp AND với các bộ lọc cũ. Không truyền thì bỏ qua.
+- Service kiểm tra SwitchType là giá trị đã định nghĩa (bao gồm Unknown theo enum hiện có); Connectivity chỉ nhận Wired/Bluetooth/Wireless2_4G, từ chối None/tổ hợp/giá trị ngoài miền. Controller tiếp tục dùng query binding và trả400 cho đầu vào lỗi. Không đổi API Admin, không thêm package/migration, không commit.
+- Build mới ngoài sandbox: dotnet build ShopFlow.slnx --no-restore thành công 0 warning/0 error. Chưa chạy HTTP/unit/integration hoặc rebuild Docker cho phần switch/connectivity. Cần kiểm tra switch riêng, kết nối riêng (sản phẩm nhiều kết nối vẫn khớp), kết hợp với giá/danh mục, TotalCount và enum sai/None/tổ hợp. Các bộ lọc catalog theo spec đã có code; chưa coi mọi case runtime đã pass.
+
+## Cập nhật 10/11 — hướng dẫn lọc switch/kết nối trước khi triển khai
+
+- Sau hướng dẫn thử lọc giá/sort, người dùng phản hồi “rồi ok rồi hướng dẫn tiếp”. Ghi nhận xác nhận chung của người dùng; không suy diễn mọi case/biên hoặc cả bốn kiểu sort đã được kiểm chứng riêng. Trợ lý chưa chạy HTTP mới.
+- Bước học tiếp: thêm SwitchType nullable và Connectivity nullable vào DTO, validation enum và connectivity chỉ một giá trị Wired/Bluetooth/Wireless2_4G; truyền xuống bộ lọc dùng chung cho đếm/lấy trang. Switch so bằng; connectivity kiểm tra hỗ trợ cờ kết nối, không so bằng toàn bộ flags. Chưa triển khai phần này, không tự viết backend khi chỉ được yêu cầu hướng dẫn.
+
+## Cập nhật 10/11 — triển khai lọc giá và sort
+
+- Theo yêu cầu người dùng, trợ lý thêm MinPrice/MaxPrice nullable và Sort mặc định newest vào ProductQueryRequest; service kiểm tra giá không âm, min<=max khi có cả hai, sort chỉ nhận newest/priceAsc/priceDesc/nameAsc (trim trước kiểm tra). Không truyền một đầu khoảng giá thì bỏ qua đầu đó; hai biên dùng >= và <=.
+- Repository dùng chung khoảng giá cho CountActiveAsync/GetActivePageAsync; sắp xếp trước Skip/Take. Newest: CreatedAt giảm/Id giảm; priceAsc: giá tăng/Id tăng; priceDesc: giá giảm/Id tăng; nameAsc: tên tăng/Id tăng. Không sửa luồng Admin, không thêm package/migration, không commit.
+- Build mới ngoài sandbox: dotnet build ShopFlow.slnx --no-restore thành công 0 warning/0 error. Chưa rebuild Docker hoặc chạy HTTP/unit/integration cho lọc giá/sort; xác nhận Postman bên dưới chỉ thuộc bộ lọc Q/categoryId trước đó. Tiếp theo kiểm tra khoảng giá một/hai đầu, biên bằng nhau, 4 kiểu sort và lỗi giá âm/min>max/sort lạ. Switch/connectivity chưa triển khai.
+
+## Cập nhật 10/11 — người dùng xác nhận các case lọc/tìm kiếm public
+
+- Sau hướng dẫn Postman, người dùng xác nhận “test đúng hết” cho bộ case vừa giao: GET mặc định, Q riêng, categoryId riêng, kết hợp Q/categoryId/size=1, từ khóa không có kết quả, categoryId=0/page=0/size=101 trả400. Đây là xác nhận của người dùng, không phải trợ lý trực tiếp chạy HTTP. Chưa có bằng chứng riêng rằng dữ liệu có ít nhất hai sản phẩm khớp để kiểm chứng TotalCount lớn hơn Size; chưa xác nhận Q dài quá100, trim/chuỗi trắng hoặc offset cực lớn.
+- Tiếp theo hướng dẫn lọc khoảng giá và sort xuyên suốt DTO/service/repository; sau đó switch/connectivity. Không sửa backend hoặc chạy lại build/test trong lượt ghi nhận này.
+
+## Cập nhật 10/11 — triển khai lọc/tìm kiếm public
+
+- Theo yêu cầu viết hộ, trợ lý hoàn thiện ProductQueryRequest người dùng đã tạo: Q nullable, CategoryId nullable, Page=1, Size=20; nối DTO vào ProductsController và GetPublicListAsync.
+- Service trim Q, chuỗi trắng coi như không lọc; kiểm tra Q tối đa100 ký tự sau trim, CategoryId nếu có phải >0, page>=1, size1–100 và giới hạn offset. Repository dùng chung BuildActiveQuery cho đếm/lấy trang: active AND (Name.Contains hoặc Sku.Contains) AND danh mục nếu có; đếm trước phân trang, giữ sort CreatedAt/Id giảm dần. Contains hiện phân biệt hoa/thường theo PostgreSQL mặc định; chưa bổ sung tìm không phân biệt hoa/thường.
+- Sửa phần code đang viết dở và đưa chữ ký/hành vi danh sách Admin về phân trang cũ; bộ lọc mới chỉ áp dụng public. Không thêm package/migration, không commit.
+- Build mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công 0 warning/0 error; sandbox trước đó thất bại không có chẩn đoán. Chưa chạy kiểm thử HTTP hoặc unit/integration cho bộ lọc, chưa rebuild API Docker. Tiếp theo kiểm tra không có bộ lọc, Q riêng, danh mục riêng, kết hợp, TotalCount và input sai. Khoảng giá/switch/connectivity/sort tùy chọn vẫn chưa làm.
+
+## Kết phiên 10/11 — lịch sử trước khi viết lọc/tìm kiếm
+
+- Đã kiểm tra code đã lưu: ProductsController có GET /api/products/{id} và GET /api/products?page=1&size=20, không yêu cầu đăng nhập. Chi tiết thiếu/inactive trả404; active hết hàng vẫn hiển thị. Repository danh sách lọc IsActive trước Skip/Take, Include(Category), AsNoTracking, sort CreatedAt/Id giảm dần; CountActiveAsync chỉ đếm active.
+- ProductsResponse và ProductListResponse ở namespace Dtos.Products; Items là List<ProductsResponse>. GetPublicListAsync trả một ProductListResponse. Chi tiết và danh sách đã cùng dùng MapToPublicResponse; DTO public không có RowVersion, IsActive, CreatedAt.
+- Người dùng báo đã kiểm tra Postman phần chi tiết rồi danh sách công khai. Đây là xác nhận chung của người dùng, không phải trợ lý trực tiếp chạy HTTP hoặc bằng chứng riêng cho mọi case/biên offset. Không chạy lại unit/integration test trong lượt kết phiên.
+- Build kết phiên: dotnet build ShopFlow.slnx --no-restore thành công 0 warning/0 error. Không sửa backend hoặc commit trong lượt kết phiên.
+- Còn nhỏ: thông báo validation đang ghi “Trang phai trong khoan tu 1-100”, nên đổi thành page >=1, size 1–100 khi tiếp tục; logic kiểm tra hiện đúng. Spec dòng DTO public còn ghi isActive/createdAt trong khi hướng dẫn và code hiện bỏ hai trường này; cần thống nhất trước khi chốt hợp đồng API, không tự sửa spec trong lượt này.
+- QUAN TRỌNG: phần lọc/tìm kiếm vừa được hướng dẫn nhưng người dùng xác nhận CHƯA LÀM. Chưa có ProductQueryRequest, tìm theo q hoặc lọc categoryId; chưa có khoảng giá, switch/connectivity, sort tùy chọn. Không tick hoàn thành các phần này.
+- Phiên sau bắt đầu ProductQueryRequest (Q, CategoryId, Page, Size), chuẩn hóa/validation, dùng cùng bộ lọc active + Name/Sku + CategoryId cho đếm và phân trang. Hướng dẫn mục tiêu trước, người dùng tự viết; chưa tự tạo DTO/khung khi chưa được nhờ. Không quay lại làm GET public cơ bản từ đầu.
+- Đã tách quy tắc làm việc sang AGENTS.md theo yêu cầu; notes giữ tiến độ/lịch sử. Đã cập nhật bốn mô tả buổi12 trong learning-plan, giữ 30 buổi/120 ID; học/thực hành/kiểm chứng buổi12 còn dở do bao gồm filter/sort.
+- Đã khởi động Docker Desktop và tracker riêng, không xóa volume. Đọc lại /api/progress xác nhận nội dung mới; day-12-review đã tick, day-12-learn/build/verify vẫn false. Tổng hiện tại 44/120 mục (37% làm tròn); giữ nguyên xác nhận/timestamp các mục khác.
+
+## Kết phiên 09/11 — lịch sử: đã đọc sản phẩm Admin, tiếp tục catalog công khai
+
+- Đã có GET /api/admin/products/{id} và GET /api/admin/products?page=1&size=20, yêu cầu Admin. Repository GetByIdAsync/GetPageAsync dùng AsNoTracking, Include(Category); danh sách sort CreatedAt rồi Id giảm dần, Skip/Take, không lọc IsActive. CountAsync đếm toàn bộ sản phẩm. Service GetListAsync kiểm tra page>=1, size 1–100, offset không vượt int.MaxValue; trả AdminProductListResponse Items/Page/Size/TotalCount. MapToResponse dùng chung cho GET chi tiết/danh sách; CreateAsync còn map riêng (không phải lỗi chặn).
+- POST /api/admin/products đã đổi sang CreatedAtAction(nameof(GetById), id, response). User xác nhận GET chi tiết200, ID thiếu404, POST201 có Location và gọi GET lại được. User xác nhận bộ test danh sách page1/page2 size2, trang vượt dữ liệu trả200/items rỗng, page0 và size101 trả400. Đây là xác nhận người dùng qua Postman, không phải trợ lý trực tiếp chạy HTTP.
+- Build kết phiên: dotnet build ShopFlow.slnx --no-restore thành công 0 warning/0 error. Không chạy lại test auth/category vì không sửa phần đó; kết quả 6 auth và11 category unit trước đây là lịch sử, không phải đợt test sản phẩm mới.
+- Còn thiếu: các case input sai của POST sản phẩm chưa được user xác nhận riêng; Admin đọc inactive/hết hàng, auth Customer trên endpoint sản phẩm, biên offset cực lớn và concurrency PostgreSQL thật chưa kiểm chứng. Không tick kiểm chứng trọn bộ. Chưa có GET sản phẩm công khai, filter/search, PUT/DELETE sản phẩm.
+- Phiên sau: hướng dẫn GET /api/products/{id} và danh sách /api/products công khai. DTO public không RowVersion; lọc IsActive, inactive chi tiết404, hết hàng active vẫn hiển thị. Tái sử dụng mapping hợp lý nhưng không trả nguyên AdminProductResponse cho khách. Sau đó bộ lọc/tìm kiếm/sort; không quay lại làm GET Admin từ đầu.
+- Trong phiên trợ lý được nhờ hoàn thiện DTO, map response, GetListAsync và sửa các phần được yêu cầu.
+- Web PersonalProgress đã có ô Tổng tiến độ dự án: đếm block done/tổng120, phần trăm làm tròn, tính cả buổi chưa hoàn thành; tự cập nhật cùng polling. Đã rebuild tracker riêng, giữ volume xác nhận. Lượt trước xác minh38/120 (32%); lượt kết phiên sẽ cập nhật thêm các mục đã học/thực hành/tổng kết, không dùng số cũ làm trạng thái hiện tại.
+- Kế hoạch giữ30 buổi/120 ID. Buổi11 phản ánh đọc Admin đã làm; buổi12 chuyển thành catalog công khai + lọc/tìm kiếm. Tổng kết buổi10/11/13 ghi rõ việc còn thiếu. Không sửa backend hoặc commit trong lượt kết phiên này.
+
+## Cập nhật tiến độ 09/11 — lịch sử trước GET sản phẩm Admin
+
+- Category đã có PUT/DELETE. Quy tắc mới: có sản phẩm vẫn được đổi tên sau confirmRename=true; thiếu xác nhận trả 409 CATEGORY_RENAME_CONFIRMATION_REQUIRED. Tên không đổi không cần xác nhận; trùng danh mục khác 409. Transaction Serializable và ánh xạ xung đột 40001/40P01, kể cả commit. DELETE chặn danh mục có sản phẩm, bắt đúng FK_Products_Categories_CategoryId; thành công 204, thiếu ID 404.
+- Bằng chứng: ảnh PUT id=2 Full-size 200; id=1 đổi 75% Demo chưa xác nhận 409, xác nhận true 200. User xác nhận các case GET đọc lại, PUT trùng/rỗng/ID thiếu đúng; user xác nhận bộ DELETE (có sản phẩm 409, danh mục tạm 204, xóa lại 404) chạy được. 11 unit cases CategoryUpdateTests pass; không chứng minh race/rollback PostgreSQL thật.
+- Tạo sản phẩm đã có CreateProductRequest (IValidatableObject), AdminProductResponse, IProductRepository/ProductRepository, ProductsService, AdminProductsController POST /api/admin/products. DI và JSON enum chuỗi đã cấu hình, cấm enum dạng số. Chuẩn hóa SKU/chuỗi, kiểm tra danh mục/SKU, gộp flags, Add/Save/map DTO. Exception hiện tên ProductAlreadyExistException và CategoryNotFoundException; repository bắt đúng unique SKU và FK danh mục. Controller trả 201, SKU_EXISTS 409, CATEGORY_NOT_FOUND 400.
+- Build gần nhất trong phiên: dotnet build ShopFlow.slnx --no-restore thành công 0 warning/0 error. User xác nhận POST sản phẩm hợp lệ 201 và gửi lại SKU 409. Các case validation sản phẩm đã hướng dẫn nhưng chưa được xác nhận riêng. Chưa kiểm thử cạnh tranh sản phẩm trên PostgreSQL thật.
+- Việc tiếp theo: GET chi tiết sản phẩm Admin. Đã hướng dẫn repository AsNoTracking/Include Category/GetByIdAsync, service map AdminProductResponse dùng chung, controller GET 200/404; POST đổi StatusCode(201) sang CreatedAtAction khi GET đã có. Controller vừa đọc vẫn chỉ POST, chưa Location. Sau đó danh sách/public và phần CRUD sản phẩm còn lại.
+- Trợ lý đã được nhờ viết DTO sản phẩm, map response và hoàn thiện cập nhật Category.
+- Cập nhật web theo yêu cầu: ghi nội dung mới cho buổi10/11/13, giữ 30 buổi/120 ID; chỉ tick học/thực hành buổi10 và13, không tick các mục kiểm chứng chưa đầy đủ. Các ghi chép bên dưới là lịch sử, không phải trạng thái hiện tại. Không sửa backend/commit trong lượt cập nhật tiến độ này.
+
+## Kết phiên 09/11 — lịch sử trước khi làm PUT/DELETE và sản phẩm
+
+- Auth/đăng ký và đợt test đã hoàn thành phạm vi: 3 unit cases + 3 integration cases PostgreSQL test (thành công, rollback, race email có cổng đồng bộ), lần chạy trong phiên 6/6 pass. Không mở rộng test auth để trì hoãn CRUD. Build cuối phiên 09/11: dotnet build ShopFlow.slnx --no-restore, 0 warning/0 error. Không chạy lại test ở cuối phiên vì không sửa auth/test sau lần 6/6 pass.
+- Đã đối chiếu appsettings.json: Jwt:ExpirationMinutes = 60. Docker/API/tracker đang tắt lúc bắt đầu kết phiên; không coi là lỗi code. Chưa có kiểm thử HTTP mới ở thời điểm kết phiên nếu dịch vụ chưa lên.
+- Danh mục: CreateCategoryRequest (Required/MaxLength100), CategoryResponse (Id/Name); ICategoryRepository/CategoryRepository có GetAllAsync, GetByIdAsync, GetByNormalizedNameAsync, Add, SaveChangeAsync. Danh sách AsNoTracking, sort Name rồi Id; chỉ chuyển unique constraint IX_Categories_NormalizedName thành CategoryAlreadyExistsException.
+- Class CategoryService nằm trong file Services/CategoriesService.cs (tên file số nhiều). CreateAsync trim an toàn null, kiểm tra 1–100 ký tự, ToLowerInvariant, kiểm tra trùng, tạo/lưu entity rồi map DTO. GetAllAsync/GetByIdAsync map DTO, chi tiết thiếu trả null. DI đã đăng ký đúng.
+- GET /api/categories công khai; AdminCategoriesController yêu cầu Admin cho GET danh sách, GET /{id:int}, POST tạo (201 + CreatedAtAction Location, 400/409). CHƯA có PUT/DELETE.
+- Bằng chứng runtime danh mục: ảnh POST TKL trả 201, id=2. GET /api/admin/categories/2 từng 401 do token; sau hướng dẫn đăng nhập/cập nhật token người dùng xác nhận “rồi được rồi”. Chưa có xác nhận riêng cho trùng TKL/tkl/khoảng trắng 409, tên rỗng/quá dài 400, GET công khai hoặc header Location. Không suy diễn “được rồi” thành tất cả case pass.
+- Quy tắc mới theo yêu cầu người dùng: cho đổi tên danh mục có Product (kể cả inactive) sau khi Admin xác nhận. PUT nhận confirmRename mặc định false; nếu tên thay đổi và có Product mà chưa xác nhận, trả 409 CATEGORY_RENAME_CONFIRMATION_REQUIRED, không lưu. Giao diện hỏi xác nhận rồi gửi lại với confirmRename=true; tên hiển thị của tất cả sản phẩm thuộc danh mục sẽ thay đổi. Danh mục trống đổi tên không cần xác nhận. Giữ transaction Serializable quanh kiểm tra/cập nhật để xử lý thêm/chuyển Product đồng thời; xung đột trả 409. Xóa danh mục có Product vẫn bị chặn. Đây là thiết kế mới, chưa triển khai; user tự viết, không tick hoàn tất CRUD.
+- User tự viết DTO/interface/repository/service; trợ lý sửa lỗi theo yêu cầu, hoàn thiện SaveChangeAsync, các lỗi validation, controller công khai và bổ sung controller Admin.
+- Đã giải thích DI so với implement interface; async chỉ đặt ở phương thức có thân; Task<Category?> là kết quả có thể null; Category là layout có trước, Product chọn CategoryId. Giữ thiết kế tạo danh mục riêng, UI sau này có thể thêm nhanh danh mục cạnh dropdown.
+- Không commit, không sửa backend trong lượt kết phiên. Các mục 08/11 và cũ hơn bên dưới là lịch sử.
+- Đã khởi động Docker Desktop và PersonalProgress để cập nhật web. Đã sửa learning-plan.json, giữ 30 buổi/120 ID; web xác nhận buổi7–8 hoàn tất, buổi9 học/thực hành đã tick, kiểm chứng/tổng kết buổi9 và buổi10 vẫn chưa tick. Timestamp các mục đã hoàn thành trước đó được giữ nguyên. Việc seed Admin tự động và CancellationToken được ghi rõ chưa triển khai, không tính là đã làm. Không có kết quả HTTP danh mục mới từ trợ lý ở lượt kết phiên.
+
+## Trạng thái 08/11 — ưu tiên hơn các mục lịch sử bên dưới
+
+- Đã hoàn thiện JWT validation trong Program.cs, middleware authentication trước authorization; có GET /api/auth/me và GET /api/auth/admin-check yêu cầu Admin.
+- Login hợp lệ 200 có ảnh; các trường hợp sai thông tin/validation người dùng xác nhận đúng. /me không token và token sai: trợ lý kiểm tra trực tiếp 401; token hợp lệ: ảnh 200 với Customer. admin-check: ảnh Customer bị 403. Người dùng xác nhận token hết hạn 401 và token Admin 200; không coi là trợ lý trực tiếp chạy hai trường hợp sau. Chưa đối chiếu lại cấu hình thời hạn đã khôi phục 60 phút.
+- AuthService đã xử lý SuccessRehashNeeded: tạo hash từ mật khẩu vừa nhập, gán và lưu trước khi cấp JWT.
+- AuthServiceTests: 3 unit scenarios Failed/Success/SuccessRehashNeeded, dùng fake, không chứng minh lưu DB thật.
+- RegisterIntegrationTests: PostgreSQL test riêng localhost:5434/shopflow_test, service db-test trong Docker-compose.yaml. MigrateAsync tạo schema; mỗi test dùng email riêng, context mới xác minh và finally dọn dữ liệu.
+- 3 integration scenarios: đăng ký lưu đúng User/Cart; trigger AFTER INSERT Cart gây lỗi có kiểm soát và xác nhận rollback User/Cart; hai đăng ký cùng email dùng DbContext riêng và cổng đồng bộ sau truy vấn email, cả hai thấy chưa tồn tại và thử lưu, đúng một thành công/một EmailAlreadyExistsException, DB đúng một User/một Cart. Đây là gọi service thật, không phải hai HTTP request.
+- Bộ test đã chạy 6/6 pass. Test rollback gỡ trigger/function trong finally. Không sửa logic production để vượt test. Không commit.
+- Đợt kiểm thử auth/đăng ký đã hoàn thành phạm vi đã chốt; tiếp theo CRUD danh mục, không mở rộng testing trước CRUD. Người dùng đã yêu cầu chuyển sang CRUD sau bài concurrency.
+- User đã nhờ viết đầy đủ cấu hình JWT, /me, rehash và các test.
+
+## Tiếp tục từ đây — trạng thái mới nhất
+
+**Login/cấp JWT đã viết xong và build pass; CHƯA kiểm thử HTTP login. Phiên sau rebuild API Docker rồi thử POST http://localhost:8080/api/auth/login. Các mục ngày 04/11 bên dưới là lịch sử.**
+
+- Register: người dùng xác nhận 201 khi hợp lệ; 409 khi trùng email/đổi hoa thường; 400 khi email sai/password ngắn/tên sau Trim quá ngắn. Người dùng kiểm tra DBeaver đúng Customer, hash, một User/một Cart và input sai không tạo user. Không coi đây là trợ lý trực tiếp truy vấn DB.
+- Người dùng cung cấp output hai request đăng ký chạy nền: một 201, một 409; xác nhận đúng một User/một Cart. Chỉ là concurrency sơ bộ, chưa chứng minh race lúc lưu/rollback.
+- ĐÃ CHỐT: xUnit + integration test rollback User/Cart và race email có kiểm soát làm SAU login/JWT validation/phân quyền và kiểm thử 401/403, TRƯỚC CRUD catalog. Không bắt quay lại rollback ngay; không tuyên bố atomic đã kiểm chứng.
+- AuthService: ValidateCredentialsAsync chuẩn hóa email, tìm user, VerifyHashedPassword; không có user hoặc Failed trả null. SuccessRehashNeeded được chấp nhận nhưng chưa cập nhật hash; cần xử lý trước khi chốt auth. LoginAsync xác minh rồi mới cấp token, map đủ user Id/Email/FullName/Role.
+- LoginResponse: AccessToken, TokenType=Bearer, ExpiresAt, User. LoginRequest: email validation, password Required, đã bỏ minimum length ở login.
+- JwtTokenService: validate cấu hình, giải mã key Base64 ít nhất 32 byte, ký HS256, claims sub/role/jti; trả tuple AccessToken/ExpiresAt. Cùng biến expiresAt cho token/response; JWT exp chính xác giây, DateTime response có thể có phần lẻ giây.
+- AuthController POST login: null trả 401 thông báo chung “Email hoặc mật khẩu không đúng”; hợp lệ Ok(response). Đã sửa tên ExpiresAt xuyên suốt và bỏ catch ArgumentException ở login.
+- DI JwtTokenService đã đăng ký; package JwtBearer 10.0.13. appsettings Jwt: ShopFlow.Api/ShopFlow.Client/60 phút. JWT_KEY trong .env được Git bỏ qua, không tracked; Compose api truyền Jwt__Key. Đã kiểm tra biến hiện diện trong container khi cấu hình, không in key.
+- Chưa AddAuthentication/AddJwtBearer/UseAuthentication, chưa /auth/me và phân quyền. Chưa rebuild container/test HTTP sau thay đổi login mới nhất.
+- Trợ lý hoàn thiện xác minh password, token service, controller login và tên thời hạn theo yêu cầu; user tự viết DTO, inject, LoginAsync/map user.
+- Build cuối phiên 06/11: dotnet build ShopFlow.slnx --no-restore ngoài sandbox, 0 warning/0 error. Không commit, không sửa backend khi kết phiên.
+- Đã giải thích tầng Controller/Service/Repository/DbContext, DTO/entity; token khác chữ ký, key dùng kiểm tra chữ ký không phải giải mã nội dung.
+
+## Trình tự phiên sau — ưu tiên hơn lịch sử bên dưới
+
+1. Rebuild: docker compose -f Docker-compose.yaml up -d --build api. API chạy Docker cổng 8080. Lệnh build image/chạy container nền, không xóa dữ liệu DB hay tự migrate.
+2. POST /api/auth/login: đúng 200 có token/expiresAt/user; sai password hoặc email chưa đăng ký 401 cùng thông báo. Chưa có bằng chứng runtime; không yêu cầu gửi token nguyên văn.
+3. Cấu hình kiểm tra JWT dùng key giải mã Base64 giống bên ký, middleware authentication trước authorization, /auth/me và quyền; kiểm thử token thiếu/sai/hết hạn 401, Customer gọi Admin 403. Hoàn thiện SuccessRehashNeeded trước khi chốt auth.
+4. Học xUnit, PostgreSQL test riêng, rollback đăng ký/race có kiểm soát, rồi mới CRUD catalog.
+5. Kết phiên cập nhật notes/plan/web theo bằng chứng. Không commit.
+
+## Lịch sử bàn giao 04/11 (đã được trạng thái trên thay thế)
 
 ## Tiếp tục từ đây
 
-- User hoàn thiện: đã sửa CreatedAt khởi tạo UTC, bỏ max length của timestamp, thêm NormalizedEmail required/max254. Đã đọc CreateUsersTable: cột/độ dài/NOT NULL, unique NormalizedEmail và check Role đúng; build 0 warning/0 error. Bước tiếp theo: người dùng áp dụng database update và kiểm tra migration/bảng Users. Chưa xác nhận migration Users đã áp dụng.
+**Code đăng ký đã hoàn thiện và build pass. Phiên sau hướng dẫn kiểm thử POST /api/auth/register với database. Chưa có bằng chứng runtime cho đăng ký; chưa chuyển sang JWT.**
 
-- User: đã có User/UserRole/DbSet và mapping, build 0 warning/0 error. Kiểm tra mới nhất còn 3 điểm cần người dùng sửa: CreatedAt chưa khởi tạo UtcNow; mapping CreatedAt còn HasMaxLength(20) cần bỏ; NormalizedEmail thiếu mapping max 254 (unique index đã có). Tên NormalizedEmail/CreatedAt, bảng Users, PasswordHash 512, FullName 100, Role conversion/string max20 và check Customer/Admin đã đúng. Role là enum không nullable nên required theo convention. Chưa tạo migration Users; hoàn thiện ba điểm rồi tạo CreateUsersTable và kiểm tra trước áp dụng.
+- AuthService đã trim/chuẩn hóa email, kiểm tra email rỗng hoặc tên ngoài 2–100 ký tự sau Trim, hash mật khẩu, tạo Customer và Cart, gắn navigation hai chiều, Add(user), await SaveChangeAsync một lần rồi trả Email/FullName.
+- IUserRepository có Task<int> SaveChangeAsync(). UserRepository dùng async/await trên cùng DbContext; chỉ chuyển DbUpdateException có PostgresException, SqlState UniqueViolation (23505) và ConstraintName IX_Users_NormalizedEmail thành EmailAlreadyExistsException. Lỗi khác truyền ra.
+- EmailAlreadyExistsException kế thừa Exception, constructor có thân và thông báo "Email da duoc su dung". Service dùng cùng lỗi khi phát hiện email trước khi lưu.
+- AuthController đã có POST /api/auth/register: 201 kèm response, catch email trùng trả 409, ArgumentException trả 400. Không còn TODO/NotImplementedException.
+- Đã giải thích DataAnnotations/[ApiController] validation khác bắt exception; thư mục Exceptions chỉ định nghĩa lỗi, không phải middleware. Chưa có middleware xử lý lỗi chung/JWT.
+- Cart schema/migration đã xác nhận DB ngày 03/11; không làm lại. Chưa kiểm thử đăng ký, hash, hai request đồng thời hoặc rollback atomic.
+- Kiểm tra cuối phiên 04/11: dotnet build ShopFlow.slnx --no-restore --no-incremental ngoài sandbox: 0 warning/0 error. Build trong sandbox thất bại không có chẩn đoán.
+- Người dùng tự viết lưu/response/validation/exception; trợ lý viết bộ lọc lỗi repository và hoàn thiện controller theo yêu cầu.
+- Bảng tiến độ buổi 6: học/thực hành xong; kiểm chứng/tổng kết nghiệp vụ chưa xong.
+## Trình tự đề xuất cho phiên sau
 
-- Theo yêu cầu, đã đổi DbSeeder.SeedAsync thành Task<int>, trả kết quả SaveChangesAsync sau cả hai nhánh kiểm tra; bỏ return sớm khi SKU tồn tại để Category mới vẫn được lưu nếu có. Program.cs in không có thay đổi khi kết quả 0, hoặc số bản ghi mới khi >0 (seed hiện chỉ thêm). Build 0 warning/0 error; chưa chạy lại seed để xác minh console sau sửa đổi này.
+1. Đọc notes/code đã lưu; không giao lại register/controller/schema đã xong.
+2. Hướng dẫn chạy DB/API đúng môi trường và POST /api/auth/register: hợp lệ → 201; gửi lại email hoặc đổi hoa/thường → 409; email sai, password ngắn, tên sau Trim quá ngắn → 400.
+3. Kiểm tra DB: đúng một Cart cho User, role Customer, password được hash và response không lộ hash. Kiểm thử đồng thời và rollback User/Cart bằng kiểm thử tích hợp có kiểm soát trước khi xác nhận atomic.
+4. Sau kiểm chứng đăng ký mới login/JWT; kiểm tra dependency trước khi cài. Middleware exception chung thuộc bước xử lý lỗi sau này.
+5. Khi kết phiên: kiểm tra code/build/bằng chứng, cập nhật notes + learning-plan + tick web. Không tự commit.
+## Code và bằng chứng hiện có
 
-- Đã truy vấn trực tiếp PostgreSQL trong Compose: Categories có đúng 1 dòng Id=1, Name/NormalizedName="75%"; SKU DEMO75-BLK-LIN có đúng 1 dòng Id=1, CategoryId=1, join đúng CategoryName="75%". Đã xác minh seed lưu cả hai bảng. Chưa kiểm chứng riêng việc chạy seed lại giữ nguyên giá/tồn đã sửa; bước tiếp theo là kiểm tra tính chạy lại an toàn trước khi kết thúc seed và chuyển User/auth. Không tự đánh dấu toàn bộ kiểm chứng catalog hoàn thành.
+### EF Core và database
 
-- Mốc seed mới nhất: đã kiểm tra Program.cs có nhánh args.Contains("--seed"), tạo DI scope/lấy ShopFlowDbContext, await SeedAsync rồi return; đúng. Build toàn bộ 0 warning/0 error. Bước tiếp theo là người dùng chạy `dotnet run --project src/ShopFlow.Api --no-launch-profile -- --seed` hai lần trong terminal có connection string và kiểm tra Category/SKU trong database; chưa có kết quả chạy seed.
+- .NET 10, Controller–Service–Repository trong một API project; EF Core + PostgreSQL qua Npgsql.
+- DbContext có DbSet Categories, Products, Users, Carts; DI UseNpgsql đọc DefaultConnection.
+- `GET /health/db`: CanConnectAsync, 200/503. Người dùng từng báo test được; không coi kiểm tra kết nối là kiểm chứng schema.
+- `Microsoft.EntityFrameworkCore.Design` 10.0.4 đã thêm để hỗ trợ EF tooling; dotnet ef đã kiểm tra là 10.0.14. Npgsql package vẫn `10.*` (lần đọc assets trước là EF Core 10.0.4); chưa khóa patch Npgsql.
+- Category: Id, Name, NormalizedName, Products navigation. Hai tên required/max100; unique NormalizedName. IsRequired không chặn chuỗi rỗng.
+- Product: đầy đủ SKU, giá decimal, Stock long, switch enum, connectivity Flags 1/2/4, bool? IsHotSwappable, UTC CreatedAt, uint RowVersion; CategoryId/navigation.
+- Mapping Product: độ dài theo spec, SwitchType lưu chuỗi/check enum, Connectivity int/check1–7, numeric(18,2), Stock bigint, check Price>0/Stock>=0, unique SKU; index Name/CategoryId; RowVersion IsRowVersion ánh xạ xmin. Quan hệ Category–Product có DeleteBehavior.Restrict.
+- User: Id, Email, NormalizedEmail, PasswordHash, FullName, UserRole, CreatedAt=UtcNow. Role Customer=0, Admin=1. Mapping Users: email/max254, hash/max512, fullname/max100, role string/max20/check Customer/Admin, timestamptz, unique NormalizedEmail.
+- Migrations đã đọc và xác nhận cấu trúc đúng:
+  - `20261031041454_InitialCreate`
+  - `20261031102053_AddProducts`
+  - `20261031141034_CreateUsersTable`
+- Category/Product đã có bằng chứng đọc DB trực tiếp. Users và Carts: đã truy vấn schema/migration history trực tiếp ngày 03/11 và xác nhận đã áp dụng.
 
-- Seed: người dùng đã điền xong DbSeeder.SeedAsync; đọc lại xác nhận tìm Category theo NormalizedName, chỉ thêm khi thiếu, tìm Product theo Sku và chỉ thêm khi thiếu, gắn Category navigation rồi SaveChangesAsync. Build toàn bộ thành công 0 warning/0 error. Chưa nối/chạy seed hoặc kiểm chứng database hai lần. Bước tiếp theo: thêm chế độ chạy seed chủ động trong Program.cs (ví dụ --seed), tạo DI scope lấy DbContext, gọi seed rồi thoát; sau đó chạy hai lần kiểm tra không nhân bản. Comment gọi service ở dòng NormalizedName là ghi chú cũ cần bỏ, không phải logic đã triển khai.
+### Seed catalog
 
-- Mốc mới nhất: đã đọc `20261031102053_AddProducts.cs`, xác nhận bảng/cột/check/index SKU unique và FK CategoryId với Restrict đúng. Người dùng báo đã áp dụng xong sau khi đổi cú pháp connection string từ CMD sang PowerShell; chưa có output database để kiểm chứng độc lập. Bước kế tiếp: hướng dẫn tự viết `Data/DbSeeder.cs`, seed demo Category/SKU theo khóa NormalizedName/Sku, chạy lại không nhân bản hoặc ghi đè tồn/giá. Chưa viết/chạy seed; không tự tick web.
+- `Data/DbSeeder.cs`: `Task<int> SeedAsync(ShopFlowDbContext db)` tìm Category theo NormalizedName="75%", thêm nếu thiếu; kiểm tra SKU="DEMO75-BLK-LIN", thêm Product nếu thiếu; gắn Category navigation. Seed không cập nhật tồn/giá sản phẩm hiện có.
+- Dữ liệu mẫu: Brand Demo, màu Black, Linear, Wired, hot swap true, Price=1500000m, Stock=10; mô tả là dữ liệu giả.
+- SaveChangesAsync nằm sau các nhánh và trả số entity đã lưu. Không return sớm chỉ vì Product đã tồn tại: Category mới (nếu có) vẫn cần lưu.
+- Program.cs: khi args có --seed, tạo DI scope/lấy DbContext, await seed; kết quả 0 in không có thay đổi/không ghi đè, >0 in số bản ghi mới; return để không chạy web server. Chạy bình thường không seed hoặc tự migrate.
+- Đã đọc DB bằng Docker/psql: Category Id=1, Name/NormalizedName=75%; SKU mẫu Id=1, CategoryId=1; mỗi truy vấn trả 1 dòng và join đúng. Người dùng không thấy Category lúc đầu, sau đã xác nhận thấy.
+- Chưa có bằng chứng độc lập cho test đổi Stock=7 rồi seed lại giữ nguyên 7, test chạy hai lần sau thay đổi thông báo console, hay các negative test constraint. Không coi chúng đã pass.
 
-- Mốc mới nhất: đã kiểm tra Product.Category = null!, quan hệ HasOne/WithMany/HasForeignKey(CategoryId)/OnDelete(Restrict) đúng, bỏ HasMany thừa ở Category. Build toàn bộ bằng `dotnet build ShopFlow.slnx --no-restore --no-incremental`: 0 warning/0 error. Hiện chỉ có InitialCreate; bước kế tiếp là người dùng tạo migration AddProducts, đọc FK/check/index rồi áp dụng và kiểm tra. TODO cũ trong Product chỉ là comment còn sót, không ảnh hưởng chức năng.
+### Kiểm tra gần nhất
 
-- Product: đã có entity, SwitchType/Connectivity enum, CategoryId/navigation, Category.Products và DbSet Products. Theo yêu cầu, trợ lý đã hoàn thiện mapping Product (độ dài, enum, precision, checks, indexes, xmin) nhưng chừa TODO quan hệ/FK với DeleteBehavior.Restrict cho người dùng tự làm. Chưa tạo migration Product. Build thành công với 1 warning CS8618: Product.Category chưa khởi tạo null!. EF có thể suy luận quan hệ theo convention; cần hoàn thiện Restrict trước migration để tránh cascade xóa sản phẩm.
+- Các lần build toàn bộ sau sửa mapping User và tạo repository scaffold thành công 0 warning/0 error.
+- Lần build khi kiểm tra repository trước đó vẫn có Add trống (build không phát hiện thiếu nghiệp vụ). Lần bàn giao 01/11 đã đọc thấy Add hoàn thiện; **không chạy build/test mới trong lượt chỉ cập nhật tài liệu này**.
+- AuthService đã có code hash nhưng chưa hoàn chỉnh/chưa chạy endpoint; chưa controller/JWT hoặc kiểm thử nghiệp vụ. Test xUnit ban đầu là test rỗng.
 
-- Người dùng báo đã xong sau hướng dẫn đặt connection string trong CMD và áp dụng migration; chưa cung cấp output `Done.` hoặc kết quả kiểm tra bảng để xác minh độc lập. Chuyển sang hướng dẫn nhóm việc tạo Product, enum, navigation Category–Product và DbSet; chưa triển khai các file này thay người dùng.
+## Các lệnh và lưu ý môi trường
 
-- Tiến độ mới nhất: người dùng đã tạo `20261031041454_InitialCreate`. Trợ lý đã đọc migration: Categories có Id identity/PK, Name và NormalizedName varchar(100) NOT NULL, unique index trên NormalizedName; Down xóa bảng. Chưa xác nhận áp dụng database. Shell trợ lý không tìm thấy lệnh docker; hướng dẫn người dùng kiểm tra Compose và chạy database update từ máy với localhost:5433.
+Compose chính xác là `Docker-compose.yaml`. API host8080 → container8080; image shopflow-api:dev. PostgreSQL17, service db, host `127.0.0.1:5433` → container5432; volume postgres-data. `.env` chứa POSTGRES_USER/PASSWORD/DB, không in hoặc ghi secret vào notes/code.
 
-- Chuẩn bị migration: đã xác nhận `dotnet ef` 10.0.14 có sẵn; đã thêm `Microsoft.EntityFrameworkCore.Design` 10.0.4 tương ứng EF Core đang restore. Chưa chạy tạo hoặc áp dụng migration. Người dùng sẽ thực hành `dotnet ef migrations add InitialCreate --project src/ShopFlow.Api` từ gốc repo, rồi đọc Up/Down và snapshot.
-
-**Đã hoàn thiện Category với `NormalizedName` và mapping required/max 100/unique index. Build thành công, 0 warning/0 error. Bước tiếp theo là migration; chưa tạo migration hoặc bảng nghiệp vụ.**
-
-- `src/ShopFlow.Api/Data/ShopFlowDbContext.cs`: kế thừa DbContext, constructor nhận options và gọi base(options), có `DbSet<Category> Categories` nằm ngoài constructor.
-- `Program.cs`: đã đăng ký `AddDbContext<ShopFlowDbContext>` + `UseNpgsql`, đọc connection string `DefaultConnection`.
-- `Docker-compose.yaml`: service api có `ConnectionStrings__DefaultConnection`, Host=db, Port=5432, lấy Database/Username/Password từ các biến POSTGRES_* trong `.env`. Không cần biến DefaultConnection riêng trong `.env`.
-- `Controllers/HealthController.cs`: route `[Route("health")]` và `[HttpGet("db")]` tạo `GET /health/db`; `CanConnectAsync` trả 200/healthy hoặc 503/unhealthy. Người dùng báo test được, không cung cấp response để trợ lý xác minh độc lập. Đây chỉ là kiểm tra kết nối, không chứng minh schema đúng.
-- `Entities/Category.cs`: có `int Id`, `string Name = string.Empty` và `string NormalizedName = string.Empty`. Còn hai using DataAnnotations/Schema không dùng, không phải lỗi chức năng.
-- Mapping Category trong `OnModelCreating`: bảng Categories, khóa chính Id, Name và NormalizedName required/max 100; NormalizedName có unique index. `IsRequired` không chặn chuỗi rỗng; trim/độ dài tối thiểu làm ở phần nghiệp vụ.
-- Trợ lý đã bổ sung mapping NormalizedName theo yêu cầu trực tiếp của người dùng, chạy `dotnet build ShopFlow.slnx --no-restore`: thành công, 0 warning/0 error. Đây là hỗ trợ trong phạm vi bước này, không thay đổi mặc định người dùng tự viết mapping.
-
-**Bước học tiếp theo:** hướng dẫn EF tooling/design-time, tạo và đọc migration rồi áp dụng, kiểm tra bảng/constraint. Không tạo lại DbContext/connection string hoặc mapping Category đã xong. Logic chuẩn hóa tên khi tạo/sửa chưa triển khai.
-
-Phiên này tạm chuyển sang làm công cụ theo dõi cá nhân **PersonalProgress**, nằm ngoài ShopFlow; chi tiết và cách chạy ở mục riêng bên dưới.
-
-## Cách làm việc đã thống nhất
-
-- Cách hướng dẫn mới nhất: đầu tiên chỉ nêu bước tiếp theo và mục tiêu để người dùng tự thử; nếu chưa biết, giải thích hàm cần làm những công việc gì; chỉ khi vẫn chưa biết/cần hỗ trợ thêm mới đưa khung TODO. Không đưa khung hoặc lời giải ngay. Vẫn gom việc liên quan thành bước hợp lý; yêu cầu viết hộ cụ thể chỉ áp dụng trong phạm vi được nhờ.
-
-- Quy tắc ưu tiên do người dùng làm rõ: **lộ trình hướng dẫn của trợ lý theo tiến độ code thực tế là chuẩn; web PersonalProgress chỉ theo dõi lại lộ trình đó**. Không lấy lịch/checklist web để đổi thứ tự hướng dẫn, bắt quay lại học mục cũ hoặc chặn chuyển bước vì chưa bấm xác nhận. Khi hướng dẫn thay đổi, cập nhật `docs/learning-plan.json` để web phản ánh đúng; không dùng file này làm nguồn quyết định thứ tự học. Web đọc lại mỗi 2 giây. Giữ ID và xác nhận cũ khi nội dung còn tương ứng; không suy ra đã kiểm chứng chỉ từ việc có code. Lộ trình đang đi: Category → InitialCreate → Product/enum/navigation → mapping/FK → AddProducts → seed → các chức năng tiếp theo. Triển khai Trim/ToUpperInvariant khi viết tạo/sửa Category, không giao bài tập riêng hoặc buộc theo ngày 10 trên web.
-
-- Mỗi khi thêm package, giải thích trước package dùng để làm gì và vì sao cần cho bước hiện tại; không chỉ báo tên/phiên bản hoặc chạy lệnh cài.
-
-- Làm rõ mới nhất: người dùng tự viết cấu hình thuộc tính/mapping entity trong `OnModelCreating` (bao gồm required, max length, unique index). Trợ lý hướng dẫn và kiểm tra, không tự sửa phần này nếu chưa được nhờ. Ngoại lệ cấu hình được làm trực tiếp vẫn áp dụng cho DI, connection string và môi trường.
-
-- Cập nhật mới nhất: gom các bước liên quan có thể làm ngay thành một lượt học hợp lý, không tách quá nhỏ (ví dụ NormalizedName gồm thêm thuộc tính, giải thích chuẩn hóa, cấu hình ràng buộc/unique index và build). Vẫn để người dùng tự thực hành phần code nghiệp vụ; trợ lý thực hiện phần cấu hình. Hướng dẫn theo một nhóm việc có kết quả rõ ràng, thay cho yêu cầu xác nhận sau từng thay đổi nhỏ.
-
-- Cập nhật sở thích: với các bước cấu hình (DI, connection string, cấu hình môi trường...), trợ lý giải thích rồi trực tiếp thực hiện, không cần chờ người dùng tự viết. Phần học code/nghiệp vụ vẫn hướng dẫn để người dùng tự thực hành, trừ khi được nhờ làm.
-
-- Người dùng chủ yếu học backend: **chỉ hướng dẫn từng bước, giải thích cú pháp; không tự viết/sửa backend hoặc Docker thay người dùng nếu chưa được nhờ**.
-- Trợ lý phụ trách viết frontend React là chính khi đến phần giao diện. Chưa bắt đầu frontend.
-- Mỗi bước nên có vị trí file, lệnh chạy, ý nghĩa phần cần thay và kết quả mong đợi; tránh dồn quá nhiều nội dung.
-- Cách hướng dẫn từ nay: khi bắt đầu mỗi bước, chỉ nói trước bước tiếp theo cần làm gì và mục tiêu của bước đó, để người dùng tự thử. Nếu người dùng chưa biết cách làm hoặc yêu cầu hỗ trợ, mới giải thích và đưa khung code có chỗ trống/TODO để người dùng tự điền; không đưa ngay lời giải/code hoàn chỉnh.
-- Ngoại lệ đã được người dùng yêu cầu: phần cấu hình thì giải thích rồi làm luôn; nếu người dùng yêu cầu điền/viết hộ một bước thì làm trong phạm vi bước đó. Không suy ra quyền tự triển khai toàn bộ backend.
-- Người dùng cần biết rõ đang làm bước nào, ở file nào, để làm gì; từng bị mất mạch khi trợ lý đi nhanh từ DI sang health endpoint. Giữ mỗi lượt học nhỏ và giải thích trước khi thao tác.
-- Lịch học mong muốn: **4 giờ/ngày**, chia đầu việc cụ thể và tiêu chí hoàn thành theo từng ngày; không chỉ checklist tổng quát.
-- Với Docker, phân biệt rõ image, container name/ID, service name, cổng máy/cổng container.
-- Lưu quyết định, sở thích và tiến độ vào notes để phiên khác tiếp tục. Khi chỉ yêu cầu tài liệu, chỉ cập nhật tài liệu.
-- Người dùng từng muốn dùng Superpowers; không tự coi đây là yêu cầu tạo agent hoặc triển khai toàn bộ sản phẩm. Phiên này làm theo hình thức hướng dẫn người dùng tự thao tác.
-
-## Quyết định kỹ thuật và phạm vi
-
-- Dự án cửa hàng **bàn phím cơ lắp sẵn**, mỗi cấu hình là một SKU có kho riêng. Chỉ làm ShopFlow; GoldPulse là dự án riêng.
-- Backend: .NET 10, Controller–Service–Repository trong một API project, EF Core + **PostgreSQL qua Npgsql**. PostgreSQL thay lựa chọn SQL Server trước đây.
-- Frontend: **React**, thay HTML/CSS/JS thuần; mã nguồn dự kiến ở `web/`. Chưa chốt tooling hoặc thư viện giao diện.
-- Hướng đóng gói hiện tại: build React thành file tĩnh đưa vào `wwwroot`, phục vụ cùng container ASP.NET Core; database container riêng. Chưa có yêu cầu tách FE bằng Nginx. Dev server FE có thể chạy riêng khi phát triển.
-- MVP gồm mua hàng, quản trị, demo web và chatbot tư vấn catalog. Reviews/báo cáo để sau.
-- 7 bảng dự kiến: Users, Categories, Products, Carts, CartItems, Orders, OrderItems.
-- JWT Admin/Customer; Customer chỉ hủy Pending, Admin hủy Pending/Paid; thanh toán mô phỏng; VND, chưa phí vận chuyển.
-- Checkout/hủy phải bảo toàn transaction, không bán vượt tồn hoặc hoàn kho hai lần.
-- Spec đã chuyển RowVersion sang thuộc tính uint ánh xạ PostgreSQL `xmin` qua Npgsql; Cart.Revision vẫn là concurrency token. Đây là thiết kế, chưa có implementation/test chứng minh.
-- Chatbot chỉ đọc catalog/chính sách, không sửa kho/đặt/hủy đơn hoặc đọc dữ liệu riêng. Provider/model/SDK AI chưa chọn.
-
-Spec chi tiết: [2026-10-30-shopflow-design.md](docs/superpowers/specs/2026-10-30-shopflow-design.md). Đã cập nhật React/PostgreSQL, nhưng chưa có implementation plan chi tiết cho toàn bộ MVP. Khi triển khai từng phần phải kiểm tra lại mapping và tính nhất quán của spec theo PostgreSQL.
-
-## Đã hoàn thành / bằng chứng
-
-| Hạng mục | Trạng thái và căn cứ |
-|---|---|
-| Solution | Có `ShopFlow.slnx`, API và xUnit cùng net10.0 |
-| API mẫu | Controllers, OpenAPI Development, WeatherForecast; người dùng xác nhận thấy JSON từ container |
-| Kiểm tra môi trường ban đầu | Người dùng báo các bước kiểm tra .NET/Docker/build/test không lỗi; trợ lý chưa xem log build/test đầy đủ |
-| Dockerfile | Đã đọc file: SDK 10 build/publish → ASP.NET 10 runtime, cổng 8080, USER APP_UID, chạy ShopFlow.Api.dll |
-| `.dockerignore` | Đã có file trong repo |
-| Docker Compose | Đã đọc `Docker-compose.yaml`: service api/db, PostgreSQL 17, volume, healthcheck và depends_on service_healthy |
-| Khởi động Compose | Ảnh cho thấy build thành công nhưng ban đầu không bind được host port 5432; sau khi đổi 5433, người dùng xác nhận xong |
-| EF provider | csproj có `Npgsql.EntityFrameworkCore.PostgreSQL` Version="10.*"; build/restore đã thành công, chưa chốt patch cụ thể |
-| EF Core và Category | DbContext, DI, connection string, Category/DbSet/mapping cơ bản; build 0 warning/0 error |
-| Health database | Có GET /health/db; người dùng báo đã test được; trợ lý chưa tự gọi endpoint trên container |
-| Tài liệu | Đã có spec, notes và checklist Docker dùng chung |
-
-## Cấu hình Docker cần nhớ
-
-- File Compose chính xác: **`Docker-compose.yaml`** (D hoa); dùng `-f` chỉ rõ file.
-- Image API: `shopflow-api:dev`. Container chạy thử trước Compose đặt tên `shopflow-api-dev`; đã hướng dẫn dừng để tránh chiếm cổng. Chưa xác nhận đã xóa container cũ.
-- API: host 8080 → container 8080. URL mẫu: `http://localhost:8080/WeatherForecast`.
-- Database image: `postgres:17`; service name: `db`.
-- Database port mapping: **`127.0.0.1:5433:5432`**.
-- Named volume trong YAML: `postgres-data`, gắn `/var/lib/postgresql/data`.
-- Healthcheck: `pg_isready`; restart policy: `unless-stopped`.
-- `.env` dùng POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB. `.gitignore` có `.env`; không ghi secret vào notes hoặc commit. Không đọc/in secret chỉ để kiểm tra tiến độ.
-- Service `api` đã có environment `ConnectionStrings__DefaultConnection`; `Program.cs` đã đăng ký DbContext sử dụng cấu hình này.
-
-| Nơi kết nối PostgreSQL | Host | Port |
+| Nơi chạy | Host PostgreSQL | Port |
 |---|---|---|
-| Máy người dùng: pgAdmin/DBeaver/dotnet run | localhost | 5433 |
+| EF CLI/API chạy trên Windows | localhost | 5433 |
 | API trong Compose | db | 5432 |
 
-Các lệnh từ gốc repo:
+Chỉ có một database trong Docker: Compose khởi động nó; EF chạy trên host kết nối để cập nhật schema. EF không tự đọc `.env` Compose. Người dùng đã nhầm CMD/PowerShell nhiều lần: nhìn prompt trước khi đưa lệnh.
 
+PowerShell (prompt PS):
 ```powershell
-docker compose -f Docker-compose.yaml config --quiet
-docker compose -f Docker-compose.yaml up -d --build
+$env:ConnectionStrings__DefaultConnection = 'Host=localhost;Port=5433;Database=TEN_DB;Username=TEN_USER;Password=MAT_KHAU'
+```
+CMD:
+```cmd
+set "ConnectionStrings__DefaultConnection=Host=localhost;Port=5433;Database=TEN_DB;Username=TEN_USER;Password=MAT_KHAU"
+```
+Đặt trong cùng terminal chạy EF/seed; cửa sổ mới cần đặt lại. Thay placeholder bằng thông tin của người dùng, không yêu cầu gửi mật khẩu. Đã từng có comment chứa connection string thật trong DbContext; không chép lại secret, nhắc bỏ nếu còn xuất hiện.
+
+Lệnh từ gốc ShopFlow:
+```powershell
+docker compose -f Docker-compose.yaml up -d db
 docker compose -f Docker-compose.yaml ps
-docker compose -f Docker-compose.yaml logs --tail 100 db
-docker compose -f Docker-compose.yaml logs --tail 100 api
+dotnet ef migrations add TEN_MIGRATION --project src/ShopFlow.Api
+dotnet ef database update --project src/ShopFlow.Api
+dotnet ef migrations list --project src/ShopFlow.Api
+dotnet run --project src/ShopFlow.Api --no-launch-profile -- --seed
+dotnet build ShopFlow.slnx --no-restore --no-incremental
 ```
+Tên migration là tên tự đặt; EF so model với snapshot để quyết định thay đổi. Không tạo lại migration chỉ để đổi tên. Không dùng EnsureCreated/migration ngầm. Không dùng down -v khi cần giữ dữ liệu. Đổi POSTGRES_PASSWORD trong .env không tự đổi password DB đã khởi tạo.
 
-Không dùng `down -v` nếu cần giữ dữ liệu. Thay POSTGRES_PASSWORD trong .env không tự đổi mật khẩu database đã khởi tạo.
+Docker CLI tìm thấy khi chạy ngoài sandbox:
+`C:\Users\Hi\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe`.
+Sandbox có thể không thấy executable/config NuGet; xin escalation đúng quy định khi cần, không kết luận Docker chưa cài.
 
-## Công việc chưa làm
+Hướng dẫn riêng: [migration-guide.md](docs/migration-guide.md) hiện viết theo CMD. [docker-checklist.md](docs/docker-checklist.md) là checklist dùng chung, không biến thành tài liệu riêng ShopFlow.
 
-- Các entity/mapping còn lại, migration, seed và schema nghiệp vụ; Category.NormalizedName/unique index đã hoàn thiện.
-- Auth/JWT, catalog, cart, checkout, đơn hàng, hoàn kho, xử lý lỗi/rate limit.
-- Frontend React và chatbot.
-- Swagger UI có Authorize (health database đã có).
-- Unit/integration tests nghiệp vụ; test hiện tại vẫn là test rỗng. 20 kịch bản integration, 20 câu hỏi AI và 10 khách đồng thời là mục tiêu trong spec, chưa phải kết quả chạy.
-- Kiểm chứng dữ liệu giữ nguyên sau tạo lại container, backup/restore, CI, README đầy đủ, deploy lên server.
+## Phạm vi dự án và việc còn lại
 
-## Trình tự cho phiên sau
+- Cửa hàng bàn phím cơ lắp sẵn; mỗi cấu hình là một SKU có kho riêng. Chỉ làm ShopFlow, GoldPulse riêng.
+- React chưa bắt đầu; dự kiến web/, build vào wwwroot cùng container API, DB container riêng.
+- MVP: mua hàng/quản trị/demo/chatbot catalog; reviews và báo cáo để sau. 7 bảng Users, Categories, Products, Carts, CartItems, Orders, OrderItems.
+- JWT Admin/Customer; Customer hủy Pending, Admin hủy Pending/Paid; thanh toán mô phỏng, VND, không phí ship. Checkout/hủy phải atomic, không bán vượt tồn/hoàn kho hai lần; Cart.Revision là concurrency token.
+- Chatbot chỉ đọc catalog/chính sách, không thao tác đơn/kho/dữ liệu riêng; chưa chọn provider/model/SDK.
+- Còn: Cart/Order schema, register/login/JWT, CRUD catalog, cart/checkout/order, error handling/rate limit, frontend, chatbot, unit/integration tests, backup/restore/CI/README/deploy.
+- 20 integration scenarios, 20 câu hỏi AI, 10 khách đồng thời là mục tiêu, chưa phải kết quả.
+- Spec: [2026-10-30-shopflow-design.md](docs/superpowers/specs/2026-10-30-shopflow-design.md). Ưu tiên spec/notes mới hơn tài liệu Word công nghệ cũ.
 
-1. Đọc notes và git status; giữ nguyên thay đổi của người dùng. Category.NormalizedName và mapping đã hoàn thiện, build thành công.
-2. Khi làm luồng tạo/sửa sau này, chuẩn hóa tên bằng Trim().ToUpperInvariant(); entity không tự chuẩn hóa.
-3. Không làm lại mapping Category. Chốt patch Npgsql khi cần build tái lập, không cài lại package máy móc.
-4. Hướng dẫn EF tooling/design-time nếu cần, tạo và đọc migration, áp dụng bằng đúng host/port rồi kiểm tra bảng/constraint. Không thêm EnsureCreated hoặc migration ngầm.
-5. Tiếp tục Product/quan hệ theo spec và kế hoạch 4 giờ/ngày; có thể điều chỉnh lịch theo tiến độ thực tế. Không tự nhảy sang ngày 2 chỉ vì đã sang 31/10 khi ngày 1 chưa xong.
-6. Nếu người dùng muốn tiếp tục chỉnh tracker, làm trong PersonalProgress, không gắn tracker vào backend/Compose ShopFlow.
-7. Cập nhật notes sau các mốc; phân biệt code đã có, build/test đã chạy và kết quả người dùng báo.
+## PersonalProgress — web theo dõi riêng
 
-## Công cụ cá nhân PersonalProgress (tách khỏi ShopFlow)
+- Thư mục `C:\Users\Hi\Documents\PersonalProgress`; Node HTTP server không dependency, Docker Compose riêng (project personal-progress, service progress, Node24 Alpine), URL http://localhost:8091.
+- Không gắn service tracker vào Compose hoặc API/database ShopFlow. Mount ShopFlow vào /project read-only; xác nhận lưu volume progress-data tại /data. Không dùng down -v.
+- Nguồn nội dung web: `docs/learning-plan.json` trong ShopFlow, đọc lại mỗi 2 giây; plan.mjs là dự phòng. Notes/code cũng tự đọc lại; phát hiện code không chứng minh hoàn thành.
+- Kế hoạch gồm 30 buổi/120 ID; 4 block mỗi buổi tổng240 phút dự kiến. Quy tắc cập nhật kế hoạch nằm trong AGENTS.md.
+- Đã sửa 4 buổi đầu khớp Category → InitialCreate → Product/enum/navigation → mapping/FK/AddProducts/seed. Không yêu cầu bài tập Trim ngày1; triển khai khi làm CRUD Category. Nút Về việc tiếp theo ưu tiên việc chưa xác nhận thay vì ngày lịch.
+- Quy ước mới 03/11: được người dùng ủy quyền tự tick khi kết phiên sau kiểm tra. Web đã có ngày1–4 hoàn thành; ngày5 cập nhật đúng Users/repository và xác nhận đủ; ngày6 chỉ phần học đã xác nhận. Bỏ tick day-6-build vì AuthService vẫn NotImplementedException; DTO/hash/Cart đã xong nhưng lưu và endpoint còn thiếu. Không thay timestamp các mục cũ không cần sửa.
+- Ngày mặc định 30/10–28/11/2026, timezone Asia/Ho_Chi_Minh; PLAN_START_DATE thay lịch, xác nhận theo ID vẫn giữ.
+- Đã test Node: giữ120 ID, giữ trạng thái/timestamp, không tự hoàn thành, đọc live plan không restart, lưu xác nhận và trả HTML. Đã rebuild/start Docker và gọi API/HTML localhost:8091 thành công ngày31/10; ảnh người dùng xác nhận giao diện mới. Không kiểm tra lại container trong lượt bàn giao này.
+- Backup: `backup-aligned-plan-20261031-141141`; bản cũ `backup-before-daily-20261030-235608`, đều dưới PersonalProgress. .env/volume không bị ghi đè. Ghi ngoài workspace cần quyền môi trường.
+- Chạy tại PersonalProgress: `docker compose up -d --build`; logs: `docker compose logs --tail 50 progress`. Chỉ đổi learning-plan.json/notes thì không cần rebuild; đổi server/index cần rebuild.
 
-- Cập nhật 31/10: đã sửa server.mjs, plan.mjs và index.html để khớp các nhóm việc đã hướng dẫn, giữ nguyên 120 ID và dữ liệu xác nhận. Nguồn kế hoạch chính là `docs/learning-plan.json` trong ShopFlow; plan.mjs là dự phòng. Đã kiểm tra giữ xác nhận/lưu trạng thái/đọc lại kế hoạch không restart bằng Node; đã rebuild và khởi động Docker thành công, kiểm tra API và HTML thực tế tại localhost:8091 trả nội dung mới. Chưa kiểm tra trực quan trình duyệt trong lần sửa này. Backup: `C:\Users\Hi\Documents\PersonalProgress\backup-aligned-plan-20261031-141141`. Docker CLI nằm tại `C:\Users\Hi\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe` (tìm được khi chạy ngoài sandbox).
+## Git và tài liệu
 
-- Người dùng yêu cầu web local tự cập nhật, sau đó chốt chạy bằng **Docker Compose riêng**, chỉ phục vụ theo dõi cá nhân. Không thêm service vào Compose ShopFlow, không sửa database/API ShopFlow để phục vụ tracker.
-- Thư mục: `C:\Users\Hi\Documents\PersonalProgress`. File chính: `server.mjs` (Node HTTP server không dependency), `index.html`, `plan.mjs`, `Dockerfile`, `compose.yaml`, `.env`, `.dockerignore`, `README.md`.
-- Compose project `personal-progress`, service `progress`, image build từ Node 24 Alpine. Cổng `127.0.0.1:8091:8091`, URL `http://localhost:8091`.
-- `.env` công cụ chứa SHOPFLOW_PATH trỏ tới `C:/Users/Hi/Documents/C#/ShopFlow`. Mount vào `/project` **read-only**, dữ liệu xác nhận lưu ở named volume `progress-data` mount `/data`. Không dùng down -v nếu muốn giữ tiến độ.
-- Tự đọc lại code cố định/notes/trạng thái mỗi 2 giây khi trang mở. Không đọc `.env` ShopFlow. Nhận diện theo mẫu chỉ cho biết có dấu hiệu code, không chứng minh build/test đúng. Notes được hiển thị tự cập nhật, không tự suy luận thành hoàn thành.
-- Ban đầu có 19 mốc tổng quát và 7 mốc ghi nhận từ phiên học. Bản mới giữ chúng ở lịch sử cùng dữ liệu cũ, thêm **30 ngày × 4 giờ = 120 đầu việc**. Không tự đánh dấu bài học hoàn thành chỉ vì có code.
-- Mỗi ngày: 45 phút hiểu bài + 90 phút thực hành + 75 phút kiểm chứng/sửa lỗi + 30 phút tổng kết; thời gian tập trung chưa tính nghỉ. Mỗi việc xác nhận riêng; đủ 4 việc mới xong ngày. Lưu timestamp xác nhận, hiển thị ngày còn tồn và mục tiêu cuối buổi.
-- Mặc định từ **30/10/2026 đến 28/11/2026**, timezone hiển thị ngày hiện tại Asia/Ho_Chi_Minh. Đổi `PLAN_START_DATE=YYYY-MM-DD` trong `.env` công cụ rồi chạy lại Compose để dời lịch, các xác nhận gắn theo số buổi vẫn được giữ.
-- Đây là ước lượng học tập, không cam kết MVP hoàn tất trong 120 giờ. Lịch: ngày 1 Category; 2 migration; 3–4 Product/mapping/seed; 5–8 auth; 9–14 catalog; 15 đệm/kiểm thử; 16–18 cart; 19–22 order/checkout/concurrency/hủy; 23 đệm/kiểm thử mua hàng; 24–26 React; 27 chatbot; 28 kiểm thử tổng hợp; 29 đóng gói/backup/CI; 30 demo/bàn giao. Nội dung chi tiết ở `plan.mjs`.
-- Trợ lý đã kiểm tra bằng Node: 30 ngày/120 ID duy nhất, 240 phút mỗi ngày, ngày đầu/cuối, xác nhận đủ ngày, lưu trạng thái và giữ xác nhận cũ. Trước đó đã kiểm tra code/notes thay đổi được nhận ra không cần restart.
-- **Chưa xác minh Docker build/chạy thực tế hoặc UI bằng trình duyệt:** shell không tìm thấy docker (cả đường dẫn Docker Desktop thường dùng), công cụ trình duyệt báo host unavailable. Người dùng đã được đưa lệnh rebuild nhưng chưa xác nhận bản mới chạy được.
-- Có backup bản trước cập nhật lịch tại `C:\Users\Hi\Documents\PersonalProgress\backup-before-daily-20261030-235608`. `.env` và volume không bị ghi đè. Thư mục công cụ nằm ngoài workspace, thao tác ghi cần quyền theo môi trường; trước đó đã được duyệt cập nhật.
-- Không có test server Node nào được chủ ý để chạy tiếp; các server thử đã dừng. Không tự khẳng định tracker đang chạy.
+- Lúc bắt đầu bàn giao 01/11, git status sạch; HEAD `9005273 Add Docker, entities, migrations, repositories and health controller`. Trợ lý không tạo commit trong lượt này; sau bàn giao chỉ sửa notes.md.
+- Không sửa backend, plan hoặc tracker trong lượt yêu cầu tóm tắt này.
+- Nguồn học Docker người dùng cung cấp: `C:\Users\Hi\Downloads\[PUBLIC-YT] Docker Siêu Tốc@hoidanit.md`.
+- Word tổng quan: `C:\Users\Hi\Documents\C#\Thiết kế 2 dự án .NET cho CV thực tập sinh Backend.docx`, bản backup cùng thư mục với hậu tố `.backup-2026-10-30.docx`; repo cũng có bản trong docs. Có thể còn công nghệ cũ; không sửa Word trong phiên này.
 
-Lệnh chạy/cập nhật (thực hiện trong **PersonalProgress**, không phải ShopFlow):
+## Kết phiên 03/11/2026
 
-```powershell
-cd C:\Users\Hi\Documents\PersonalProgress
-docker compose up -d --build
-docker compose logs --tail 50 progress
-```
+- Đã cập nhật learning-plan.json: buổi5 Users/migration/repository; buổi6 gồm Cart bắt buộc và đăng ký atomic; JWT config chuyển buổi7. Giữ 30 buổi và 120 ID.
+- Trạng thái web mục tiêu đã ghi qua /api/confirm: ngày1–5 hoàn thành; ngày6 học xong, thực hành/kiểm chứng/tổng kết nghiệp vụ còn dở. Không tuyên bố register hoàn thành.
+- Code backend không bị trợ lý chỉnh trong lượt kết phiên. Không commit. Thay đổi backend hiện tại là bài người dùng, cần giữ.
+- Các mục “lần bàn giao 01/11” bên dưới/trước là lịch sử, thông tin ngày03/11 ở đầu file là trạng thái ưu tiên.
+## Kết phiên 04/11/2026
 
-## Git và tài liệu tham khảo
-
-Chưa commit thay đổi phiên này. Tại lần kiểm tra cuối:
-
-- Modified: spec, `src/ShopFlow.Api/Program.cs`, `src/ShopFlow.Api/ShopFlow.Api.csproj`.
-- Untracked: `.dockerignore`, `Docker-compose.yaml`, `Dockerfile`, `docs/docker-checklist.md`, `notes.md`, `HealthController.cs`, thư mục `Data/`, `Entities/`, và tài liệu Word `docs/Thiết kế 2 dự án .NET cho CV thực tập sinh Backend.docx`. Không sửa tài liệu Word trong phiên này.
-- Các commit đã ghi nhận trước phiên: `9bd3b03` khởi tạo; `4a81cec` spec ban đầu; `144c748` spec bàn phím/chatbot. Không tự commit khi chỉ đang hướng dẫn.
-
-[Checklist Docker dùng chung](docs/docker-checklist.md): thứ tự Dockerfile/build/run/Compose/registry/server, bảng placeholder và lệnh theo container name/ID so với service name. Người dùng yêu cầu bản dùng được cho bất cứ dự án nào, không biến lại thành tài liệu riêng ShopFlow.
-
-Nguồn học người dùng cung cấp: `C:\Users\Hi\Downloads\[PUBLIC-YT] Docker Siêu Tốc@hoidanit.md`.
-
-Tài liệu Word tổng quan hai dự án: `C:\Users\Hi\Documents\C#\Thiết kế 2 dự án .NET cho CV thực tập sinh Backend.docx`; bản dự phòng `Thiết kế 2 dự án .NET cho CV thực tập sinh Backend.backup-2026-10-30.docx` cùng thư mục. Word có thể còn công nghệ cũ; ưu tiên quyết định mới trong notes và spec.
+- Đã kiểm tra code đã lưu và build thành công. Không chỉnh backend hoặc commit trong lượt kết phiên.
+- Đã cập nhật kế hoạch và tick thực hành buổi 6; kiểm chứng/tổng kết nghiệp vụ vẫn chưa xong.
+- Các mục ngày 03/11 trở về trước là lịch sử; trạng thái đầu file ngày 04/11 được ưu tiên. Phiên sau bắt đầu kiểm thử API đăng ký.

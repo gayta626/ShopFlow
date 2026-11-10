@@ -129,40 +129,40 @@
   },
   {
     "day": 5,
-    "title": "Users và cấu hình auth",
-    "goal": "Có User, unique email chuẩn hóa và cấu hình auth qua secret.",
+    "title": "Users: entity, migration và repository",
+    "goal": "Có User, unique email chuẩn hóa, migration đã áp dụng và UserRepository; JWT học ở buổi đăng nhập.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-5-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Hiểu password hash, JWT, role; đọc hợp đồng auth trong spec."
+        "description": "Hiểu UserRole, password hash và phân biệt dữ liệu tài khoản với quyền do server quyết định; JWT sẽ học khi đăng nhập."
       },
       {
         "id": "day-5-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Tạo User/mapping; migration; cấu hình các tham số JWT qua environment/secret."
+        "description": "Tạo User/mapping, migration CreateUsersTable và IUserRepository/UserRepository với tìm email chuẩn hóa và Add."
       },
       {
         "id": "day-5-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Build và kiểm tra schema; chắc chắn password/token secret không nằm trong mã nguồn hoặc log."
+        "description": "Build; kiểm tra trực tiếp bảng Users, lịch sử CreateUsersTable và unique index NormalizedEmail. Đã xác minh ngày 03/11/2026."
       },
       {
         "id": "day-5-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có User, unique email chuẩn hóa và cấu hình auth qua secret."
+        "description": "Ghi bằng chứng code/build/database vào notes; hiểu Add chỉ đánh dấu Added, SaveChangesAsync mới ghi database."
       }
     ]
   },
   {
     "day": 6,
     "title": "Đăng ký tài khoản",
-    "goal": "POST /auth/register tạo Customer và không trả password hash.",
+    "goal": "POST /api/auth/register tạo User Customer cùng Cart trong một transaction và trả Email/FullName, không trả mật khẩu/hash.",
     "minutes": 240,
     "blocks": [
       {
@@ -175,19 +175,19 @@
         "id": "day-6-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết register DTO, repository và service; chuẩn hóa email, hash password, tạo tài khoản Customer."
+        "description": "Đã hoàn thiện register DTO/service/repository/controller và build. Runtime cơ bản được người dùng xác nhận; rollback kiểm thử sau phân quyền."
       },
       {
         "id": "day-6-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Thử đăng ký hợp lệ, email trùng, input sai; kiểm tra response và dữ liệu hash trong DB."
+        "description": "HTTP đăng ký cơ bản được người dùng xác nhận. Integration test PostgreSQL riêng đã pass: tạo một User/Cart, rollback khi trigger gây lỗi lúc lưu Cart, hai lời gọi service cùng email đều qua kiểm tra tồn tại trước khi lưu và chỉ một thành công. Không coi test service là test HTTP."
       },
       {
         "id": "day-6-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: POST /auth/register tạo Customer và không trả password hash."
+        "description": "Đã ghi bằng chứng đăng ký và rollback/race có kiểm soát trong notes.md; đợt test auth/đăng ký hoàn tất phạm vi, chuyển CRUD catalog."
       }
     ]
   },
@@ -207,13 +207,13 @@
         "id": "day-7-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết login service/controller, kiểm tra password hash và sinh token."
+        "description": "Đã hoàn thiện login/DTO/JWT/DI và nhánh SuccessRehashNeeded. Cấu hình thời hạn đã khôi phục 60 phút. Build cuối phiên 09/11 đạt 0 warning/0 error."
       },
       {
         "id": "day-7-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Thử đúng/sai mật khẩu, email không tồn tại; kiểm tra token expiry và không lộ thông tin nhạy cảm."
+        "description": "Ảnh login 200; người dùng xác nhận sai mật khẩu/email chưa tồn tại 401 và input sai 400. Ba unit cases Failed/Success/SuccessRehashNeeded đã pass."
       },
       {
         "id": "day-7-review",
@@ -226,7 +226,7 @@
   {
     "day": 8,
     "title": "Phân quyền và ôn tập",
-    "goal": "Phân biệt được 401/403 và có /auth/me chạy đúng.",
+    "goal": "Phân biệt 401/403, /auth/me chạy đúng; sau phân quyền học integration test rollback đăng ký trước CRUD catalog.",
     "minutes": 240,
     "blocks": [
       {
@@ -239,19 +239,19 @@
         "id": "day-8-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Đăng ký middleware; làm /auth/me; tạo Admin demo bằng cơ chế seed phù hợp."
+        "description": "Đã cấu hình JWT validation, UseAuthentication trước UseAuthorization, /auth/me và admin-check. Tài khoản Admin thử được tạo qua register rồi nâng role bằng DBeaver; chưa triển khai seed Admin tự động."
       },
       {
         "id": "day-8-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test không token/token hết hạn/Customer vào Admin; sửa lỗi auth và catalog còn tồn từ tuần đầu."
+        "description": "Thiếu/sai token 401 được trợ lý kiểm tra; ảnh /me 200 và Customer vào Admin 403; người dùng xác nhận hết hạn 401 và Admin 200. Đã chạy 6/6 test gồm 3 unit và 3 integration PostgreSQL test riêng: đăng ký thành công, rollback, race email có cổng đồng bộ."
       },
       {
         "id": "day-8-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Phân biệt được 401/403 và có /auth/me chạy đúng."
+        "description": "Ghi bằng chứng auth và integration test rollback/race; chỉ chuyển CRUD catalog sau mốc này. Thời lượng dự kiến có thể kéo dài, không ép lịch."
       }
     ]
   },
@@ -271,13 +271,13 @@
         "id": "day-9-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết repository/service/controller danh mục và DTO; xử lý hủy request."
+        "description": "Đã viết DTO, repository, CategoryService, controller public/Admin và DI; build pass. GetAll dùng AsNoTracking và sort Name/Id. CancellationToken chưa triển khai, ghi nhận bổ sung sau phần nghiệp vụ."
       },
       {
         "id": "day-9-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Thử có dữ liệu/rỗng; response chỉ có trường công khai; tự giải thích luồng HTTP → database."
+        "description": "GET chi tiết Admin id=2 được người dùng xác nhận sau đổi token. Còn kiểm chứng GET public không token, danh sách rỗng/có dữ liệu và 404 chi tiết; chưa đánh dấu kiểm chứng hoàn tất."
       },
       {
         "id": "day-9-review",
@@ -290,96 +290,96 @@
   {
     "day": 10,
     "title": "Quản trị danh mục",
-    "goal": "Admin thêm/sửa/xóa danh mục, chặn trùng tên và danh mục đang được dùng.",
+    "goal": "Admin tạo/sửa/xóa danh mục; đổi tên danh mục có sản phẩm cần xác nhận, xóa danh mục có sản phẩm bị chặn.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-10-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Đọc quy tắc NormalizedName, khóa layout đã có Product, trả 409."
+        "description": "Đã học chuẩn hóa tên, xác nhận confirmRename, transaction Serializable, xử lý lỗi unique/FK và Controller–Service–Repository."
       },
       {
         "id": "day-10-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Trong Services/CategoryService.cs khi viết tạo/sửa: Name = input.Trim(), NormalizedName = Name.ToUpperInvariant(); từ chối tên rỗng sau trim và quá dài. Viết CRUD Admin, xử lý unique/FK conflict và transaction theo spec. Đây là bước triển khai chuẩn hóa thực tế, không làm trong entity hoặc OnModelCreating."
+        "description": "Đã có POST/PUT/DELETE Admin, GET public/Admin. PUT có sản phẩm yêu cầu confirmRename, transaction Serializable và xử lý xung đột; DELETE chặn sản phẩm tham chiếu, bắt đúng FK. Build gần nhất 0 warning/0 error."
       },
       {
         "id": "day-10-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test TKL/tkl/khoảng trắng, tên rỗng/quá dài, đổi/xóa danh mục có sản phẩm và sai role."
+        "description": "Ảnh PUT danh mục trống 200, có sản phẩm chưa xác nhận 409, xác nhận true 200. User xác nhận GET đọc lại và case PUT tên trùng/rỗng/ID thiếu; user xác nhận DELETE có sản phẩm 409, danh mục tạm 204, xóa lại 404. 11 unit cases cập nhật pass. Còn HTTP tạo tên trùng/validation, Location, Customer trên endpoint danh mục và concurrency PostgreSQL thật; chưa tick toàn bộ kiểm chứng."
       },
       {
         "id": "day-10-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Admin thêm/sửa/xóa danh mục, chặn trùng tên và danh mục đang được dùng."
+        "description": "Đã ghi notes tiến độ và bằng chứng; còn các kiểm chứng ghi rõ ở trên. Không chặn chuyển sang sản phẩm, không coi concurrency PostgreSQL đã được kiểm chứng."
       }
     ]
   },
   {
     "day": 11,
-    "title": "Danh sách và chi tiết sản phẩm",
-    "goal": "Khách xem được SKU active; SKU inactive trả 404.",
+    "title": "Đọc sản phẩm Admin: chi tiết và danh sách",
+    "goal": "Admin đọc chi tiết và danh sách phân trang, gồm cả inactive; POST có Location đến GET chi tiết.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-11-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Đọc DTO công khai, sort mặc định và phân trang ổn định."
+        "description": "Đã học AsNoTracking, Include Category để map Layout, nullable/404, DTO response, CreatedAtAction/Location, Count/Skip/Take và thứ tự CreatedAt/Id ổn định."
       },
       {
         "id": "day-11-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết GET /products và /products/{id}, DTO và mapping; lọc IsActive."
+        "description": "Đã có GET /api/admin/products/{id} và GET /api/admin/products?page=1&size=20. Repository Include Category, AsNoTracking, sort CreatedAt/Id giảm dần, không lọc inactive. Service map dùng chung cho đọc, kiểm tra page>=1, size 1–100 và offset int; response Items/Page/Size/TotalCount. POST dùng CreatedAtAction. Build cuối phiên 0 warning/0 error."
       },
       {
         "id": "day-11-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Kiểm tra active/inactive/hết hàng/id sai; response không lộ dữ liệu nội bộ."
+        "description": "User xác nhận chi tiết 200, ID thiếu 404, POST 201 có Location và GET lại được. User xác nhận danh sách page1/page2 size2, trang vượt dữ liệu items rỗng 200, page0/size101 trả400. Chưa có xác nhận riêng dữ liệu inactive/hết hàng, auth Customer trên endpoint sản phẩm, biên offset cực lớn; chưa tick toàn bộ kiểm chứng."
       },
       {
         "id": "day-11-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Khách xem được SKU active; SKU inactive trả 404."
+        "description": "Đã cập nhật notes và web cuối phiên 09/11, phân biệt build với HTTP do user xác nhận. Phiên sau bắt đầu GET sản phẩm công khai: DTO không RowVersion, chỉ active; sau đó lọc/tìm kiếm."
       }
     ]
   },
   {
     "day": 12,
-    "title": "Lọc, tìm kiếm và phân trang",
-    "goal": "API lọc sản phẩm đúng và từ chối bộ lọc không hợp lệ.",
+    "title": "Catalog công khai, lọc và tìm kiếm",
+    "goal": "Khách đọc sản phẩm active, inactive trả404; danh sách có phân trang và bộ lọc hợp lệ.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-12-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Hiểu IQueryable, thứ tự filter/sort/page và giới hạn Contains."
+        "description": "Đã học DTO public/Admin, IQueryable, lọc active, tìm Name/Sku, danh mục, khoảng giá, enum/flags, sort và phân trang. Trợ lý triển khai bộ lọc theo yêu cầu người dùng; không coi đây là bài tự viết hoàn toàn."
       },
       {
         "id": "day-12-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Thêm q, category, switch, connectivity, khoảng giá, sort và page/size theo spec."
+        "description": "Đã có GET public chi tiết/danh sách, ProductQueryRequest, bộ lọc Q/categoryId/minPrice/maxPrice/switchType/connectivity, bốn kiểu sort. Dùng chung BuildActiveQuery cho đếm/lấy trang, lọc trước phân trang; build kết phiên thành công."
       },
       {
         "id": "day-12-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test kết hợp bộ lọc, trang rỗng, sort sai, min>max; xác minh thứ tự ổn định."
+        "description": "Người dùng xác nhận các case Q/categoryId đã giao đúng; xác nhận chung giá/sort. Chưa xác nhận riêng switch/connectivity, các biên và mọi kiểu sort; trợ lý chưa chạy HTTP mới. Chưa tick kiểm chứng toàn bộ."
       },
       {
         "id": "day-12-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: API lọc sản phẩm đúng và từ chối bộ lọc không hợp lệ."
+        "description": "Đã tổng kết 10/11: bộ lọc catalog có code và build pass; lưu rõ bằng chứng người dùng và các case chưa kiểm chứng. Đã chuyển sang PUT sản phẩm; không làm lại lọc từ đầu."
       }
     ]
   },
@@ -393,25 +393,25 @@
         "id": "day-13-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Ôn quy tắc SKU, giá VND, tồn kho và CategoryId."
+        "description": "Đã học SKU theo cấu hình/tồn kho, DTO so với entity, chuẩn hóa chuỗi, enum/flags, validation DTO so với nghiệp vụ service, unique/FK và mã HTTP."
       },
       {
         "id": "day-13-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết create DTO/validation/service/endpoint; chuẩn hóa SKU và xử lý unique conflict."
+        "description": "Đã có DTO/validation, repository/service/controller Admin, DI, JSON enum chuỗi, xử lý unique SKU/FK danh mục. POST nay dùng CreatedAtAction tới GET chi tiết và trả Location. Build cuối phiên 0 warning/0 error."
       },
       {
         "id": "day-13-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test SKU trùng, category thiếu, enum sai, giá/tồn ngoài giới hạn; kiểm tra Location và status 201."
+        "description": "User xác nhận POST hợp lệ201, SKU trùng409; xác nhận thêm Location và GET lại được. Các case validation SKU hoa/thường/khoảng trắng, category thiếu, giá/tồn/enum/kết nối/tên sai đã hướng dẫn nhưng chưa có xác nhận riêng. Chưa test race SKU/FK PostgreSQL thật; chưa tick kiểm chứng."
       },
       {
         "id": "day-13-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Admin tạo SKU hợp lệ; input sai/trùng bị từ chối."
+        "description": "Đã tổng kết tạo sản phẩm/GET Admin; validation POST còn thiếu xác nhận riêng. Catalog public và PUT đã có code; bước kế tiếp là DELETE ngừng bán, rồi kiểm tra kích hoạt lại bằng PUT."
       }
     ]
   },
@@ -425,25 +425,25 @@
         "id": "day-14-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Hiểu optimistic concurrency và quy tắc khóa cấu hình SKU khi có đơn."
+        "description": "Đã học PUT, SKU loại trừ ID hiện tại, tracking, uint/uint?, RowVersion/xmin và OriginalValue. Đã giới thiệu khóa cấu hình sau khi có OrderItem; chi tiết sẽ làm khi có schema đơn hàng."
       },
       {
         "id": "day-14-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết update, soft delete, kích hoạt lại và xử lý DbUpdateConcurrencyException."
+        "description": "Đã có UpdateProductRequest, repository tracking/kiểm tra SKU/OriginalValue, UpdateAsync, ProductConcurrencyException và PUT Admin. Trợ lý hoàn thiện theo yêu cầu. Còn DELETE ngừng bán và khóa cấu hình sau OrderItem; chưa tick toàn bộ thực hành."
       },
       {
         "id": "day-14-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test hai request dùng cùng version; giá/tồn cập nhật đúng, bản cũ trả 409; test inactive."
+        "description": "Build kết phiên 10/11 thành công 0 warning/0 error. Sau hướng dẫn PUT và gửi lại RowVersion cũ, người dùng báo test được; chưa có response riêng xác nhận từng case200/409. Chưa test độc lập concurrency, lỗi SKU/FK/validation/404 hoặc inactive/kích hoạt lại; chưa tick kiểm chứng."
       },
       {
         "id": "day-14-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Update dùng RowVersion; ngừng bán không xóa lịch sử."
+        "description": "Đã cập nhật notes/plan cuối phiên10/11, phân biệt code/build với xác nhận Postman. Phiên sau DELETE ngừng bán IsActive=false, rồi kiểm tra public404/Admin vẫn đọc và PUT kích hoạt lại. Không làm lại PUT từ đầu."
       }
     ]
   },

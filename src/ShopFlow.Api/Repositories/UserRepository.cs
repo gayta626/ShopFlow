@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using ShopFlow.Api.Data;
 using ShopFlow.Api.Entities;
+using ShopFlow.Api.Exceptions;
 
 namespace ShopFlow.Api.Repositories;
 
@@ -23,4 +25,20 @@ public class UserRepository : IUserRepository
     {
         _db.Users.Add(user);
     }
+
+    public async Task<int> SaveChangeAsync()
+    {
+        try
+        {
+            return await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException postgresException &&
+            postgresException.SqlState == PostgresErrorCodes.UniqueViolation &&
+            postgresException.ConstraintName == "IX_Users_NormalizedEmail")
+        {
+            throw new EmailAlreadyExistsException();
+        }
+    }
+
 }

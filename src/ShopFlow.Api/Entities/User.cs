@@ -16,5 +16,9 @@ public class User
 
     public UserRole Role { get; set; }
 
+
+    public Cart? Cart { get; set; }
+
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

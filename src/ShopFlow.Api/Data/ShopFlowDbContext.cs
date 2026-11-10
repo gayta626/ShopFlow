@@ -14,6 +14,7 @@ public class ShopFlowDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Product> Products { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<Cart> Carts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -92,6 +93,26 @@ public class ShopFlowDbContext : DbContext
             entity.Property(u => u.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
 
             entity.HasIndex(u => u.NormalizedEmail).IsUnique();
+        });
+
+
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.ToTable("Carts");
+
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.UserId).IsRequired();
+            entity.Property(c => c.Revision)
+                .HasColumnType("bigint")
+                .HasDefaultValue(0L)
+                .IsConcurrencyToken();
+
+            entity.HasIndex(c => c.UserId).IsUnique();
+
+            entity.HasOne(c => c.User)
+                  .WithOne(u => u.Cart)
+                  .HasForeignKey<Cart>(c => c.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
     }

@@ -4,6 +4,6 @@ namespace ShopFlow.Api.Entities;
 
 public enum UserRole
 {
-    Customer,
-    Admin
+    Customer = 0,
+    Admin = 1
 }

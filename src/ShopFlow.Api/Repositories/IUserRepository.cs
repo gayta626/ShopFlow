@@ -6,4 +6,6 @@ public interface IUserRepository
 {
     Task<User?> GetByNormalizedEmailAsync(string normalizedEmail);
     void Add(User user);
+
+    Task<int> SaveChangeAsync();
 }
