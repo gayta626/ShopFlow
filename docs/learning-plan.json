@@ -431,19 +431,19 @@
         "id": "day-14-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Đã có UpdateProductRequest, repository tracking/kiểm tra SKU/OriginalValue, UpdateAsync, ProductConcurrencyException và PUT Admin. Trợ lý hoàn thiện theo yêu cầu. Còn DELETE ngừng bán và khóa cấu hình sau OrderItem; chưa tick toàn bộ thực hành."
+        "description": "Đã có PUT RowVersion và DELETE ngừng bán; còn khóa cấu hình sản phẩm sau khi có OrderItem, chưa hoàn tất toàn bộ thực hành."
       },
       {
         "id": "day-14-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Build kết phiên 10/11 thành công 0 warning/0 error. Sau hướng dẫn PUT và gửi lại RowVersion cũ, người dùng báo test được; chưa có response riêng xác nhận từng case200/409. Chưa test độc lập concurrency, lỗi SKU/FK/validation/404 hoặc inactive/kích hoạt lại; chưa tick kiểm chứng."
+        "description": "Build đã qua; người dùng xác nhận PUT và ngừng bán/kích hoạt lại. Chưa kiểm chứng độc lập concurrency và toàn bộ case validation/SKU/FK."
       },
       {
         "id": "day-14-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Đã cập nhật notes/plan cuối phiên10/11, phân biệt code/build với xác nhận Postman. Phiên sau DELETE ngừng bán IsActive=false, rồi kiểm tra public404/Admin vẫn đọc và PUT kích hoạt lại. Không làm lại PUT từ đầu."
+        "description": "Đã bàn giao PUT/DELETE sản phẩm; tiếp tục schema đơn hàng. Nhớ bổ sung khóa cấu hình khi có OrderItem."
       }
     ]
   },
@@ -495,19 +495,19 @@
         "id": "day-16-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Tạo entity/mapping/migration; unique theo user và cart/product; cấu hình revision concurrency."
+        "description": "Đã có Cart/Revision, CartItem, mapping và migration AddCartItems; build thành công."
       },
       {
         "id": "day-16-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Áp dụng migration; kiểm tra FK/index và constraint; build, đối chiếu schema."
+        "description": "Ảnh terminal xác nhận AddCartItems áp dụng Done sau lỗi thiếu bảng. Chưa truy vấn đầy đủ FK/index/check constraint thực tế hoặc thử vi phạm constraint."
       },
       {
         "id": "day-16-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có Cart, CartItem và constraint chống trùng dòng sản phẩm."
+        "description": "Đã ghi nhận schema giỏ và xử lý lỗi thiếu bảng; không đồng nhất build với database update."
       }
     ]
   },
@@ -527,19 +527,19 @@
         "id": "day-17-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết GET cart và thêm sản phẩm; xử lý sản phẩm inactive, số lượng và giới hạn giỏ."
+        "description": "Đã có GET/POST giỏ Customer, lấy sub; cộng dồn, kiểm tra inactive/tồn/99 chiếc/50 dòng, tăng Revision và lưu cùng Items."
       },
       {
         "id": "day-17-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test thêm lần đầu/thêm lại, số lượng sai, inactive và user khác; kiểm tra revision."
+        "description": "Người dùng xác nhận GET và POST chạy được; chưa có kiểm chứng riêng ownership hai khách, giới hạn50, Revision và race PostgreSQL."
       },
       {
         "id": "day-17-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Customer chỉ đọc/thêm vào giỏ của chính mình."
+        "description": "Đã bàn giao GET/POST và phân biệt xác nhận người dùng với kiểm thử trực tiếp; tiếp tục PUT/DELETE."
       }
     ]
   },
@@ -559,19 +559,19 @@
         "id": "day-18-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết cập nhật/xóa item; thống nhất xử lý lỗi và response DTO."
+        "description": "Đã có PUT đặt số lượng tuyệt đối và DELETE trả giỏ mới, tăng Revision, xử lý404/409; build thành công."
       },
       {
         "id": "day-18-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test nhiều thao tác trên cùng giỏ, xóa lặp, product hết hàng; bổ sung test cho ownership."
+        "description": "Người dùng xác nhận PUT/DELETE sau khi áp dụng CartItems. Chưa chứng minh concurrency/rollback hoặc tất cả biên/ownership."
       },
       {
         "id": "day-18-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Sửa/xóa giỏ đúng, tranh chấp revision không ghi đè âm thầm."
+        "description": "Đã ghi tiến độ CRUD giỏ; concurrency còn cần kiểm chứng, chuyển sang entity/schema đơn theo tiến độ thực tế."
       }
     ]
   },
@@ -585,25 +585,25 @@
         "id": "day-19-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Hiểu vì sao đơn lưu tên/SKU/giá tại thời điểm mua và không cascade mất lịch sử."
+        "description": "Đã học OrderStatus, Order/OrderItem, snapshot tên/SKU/giá, timestamp nullable và RowVersion đơn."
       },
       {
         "id": "day-19-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Tạo entity/mapping/migration cho order; trạng thái, tổng tiền, FK và snapshot theo spec."
+        "description": "Đã tạo entity, DbSet, mapping và migration 20261113043832_AddOrders; đã đọc migration và build thành công."
       },
       {
         "id": "day-19-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Kiểm tra schema, kiểu tiền, precision, delete restrict; build và xác nhận 7 bảng nghiệp vụ."
+        "description": "Người dùng nói đã cập nhật DB; trợ lý chưa truy vấn schema/migration history trực tiếp. Migration đã đọc, build pass; chưa coi đủ các constraint đã kiểm chứng runtime."
       },
       {
         "id": "day-19-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có Orders, OrderItems và snapshot dữ liệu sản phẩm."
+        "description": "Đã chuyển sang checkout, không tạo lại AddOrders. Còn thiếu bằng chứng schema trực tiếp; xem bàn giao mới nhất trong notes."
       }
     ]
   },
@@ -617,25 +617,25 @@
         "id": "day-20-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Vẽ các bước kiểm tra giỏ, giá/tồn, tạo snapshot và lưu đơn."
+        "description": "Đã học DTO, explicit loading Cart trước Items/Product, snapshot, transaction tự động và tường minh, await using, SaveChanges/Commit và rollback."
       },
       {
         "id": "day-20-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết checkout service và endpoint; dùng giá từ database, không tin tổng tiền client."
+        "description": "Đã có DTO, IOrderRepository/OrderRepository, OrderService, DI và OrdersController POST /api/orders, GET /api/orders/{id} lọc chủ đơn. Build mới 0 warning/0 error."
       },
       {
         "id": "day-20-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test giỏ hợp lệ/giỏ rỗng; kiểm tra tổng tiền, snapshot, tồn kho và trạng thái sau mua."
+        "description": "Người dùng xác nhận ownership200/404/401, giỏ rỗng và địa chỉ sai400. Integration test15/11 xác nhận snapshot/tổng tiền/kho giảm/giỏ rỗng bằng service và DB thật. Chưa có bằng chứng riêng header Location HTTP; giữ kiểm chứng mở."
       },
       {
         "id": "day-20-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Checkout tạo đơn và trừ tồn trong cùng transaction."
+        "description": "Bàn giao15/11: checkout và race test đã có bằng chứng riêng; tiếp theo nối GET /api/orders/me. Không giao lại phần đã xong."
       }
     ]
   },
@@ -649,57 +649,57 @@
         "id": "day-21-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Đọc transaction/concurrency/retry và invariant tồn kho trong spec."
+        "description": "Đã học Fact, dữ liệu test riêng, navigation/FK, TaskCompletionSource, Interlocked, hai DbContext, wrapper repository và Task.WhenAll."
       },
       {
         "id": "day-21-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Hoàn thiện xử lý cạnh tranh tồn kho và cart revision; lỗi nhất quán."
+        "description": "Đã hoàn thiện test hai khách mua chiếc cuối với cổng sau truy vấn, Assert DB mới và finally dọn dữ liệu riêng. Không sửa production để vượt test."
       },
       {
         "id": "day-21-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test hai người mua SKU cuối, sản phẩm inactive, thay đổi giỏ; xác nhận không tạo đơn dở dang."
+        "description": "Ngày15/11 test CheckoutIntegrationTests pass1/1 PostgreSQL thật: cùng tồn1/RowVersion, hai lần thử lưu, một thắng/một OrderConcurrencyException, tồn0/một đơn/giỏ thua giữ nguyên. Người dùng xác nhận inactive và thiếu kho409. Còn race sửa cùng giỏ và lỗi cưỡng bức giữa lưu; chưa tick trọn kiểm chứng."
       },
       {
         "id": "day-21-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Không bán vượt tồn, lỗi rollback toàn bộ."
+        "description": "Đã ghi bằng chứng, giới hạn và bàn giao15/11. Không coi test service là HTTP hay kết quả toàn suite."
       }
     ]
   },
   {
     "day": 22,
-    "title": "Vòng đời và hủy đơn",
-    "goal": "Customer/Admin chỉ đổi trạng thái hợp lệ và hoàn kho đúng một lần.",
+    "title": "Danh sách đơn, vòng đời và hủy đơn",
+    "goal": "Khách xem đơn của mình; Customer/Admin chỉ đổi trạng thái hợp lệ và hoàn kho đúng một lần.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-22-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Lập bảng Pending/Paid/canceled theo spec và quyền mỗi role."
+        "description": "Đã học danh sách đơn, ownership/tracking, DTO và mapping, transaction hủy/hoàn kho đúng một lần, trạng thái và timestamp. Đã giải thích spec mới: Admin Paid/Shipped/hủy; Customer chủ đơn xác nhận Shipped→Completed."
       },
       {
         "id": "day-22-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết đọc đơn, thanh toán mô phỏng, hủy đơn và hoàn kho trong transaction."
+        "description": "Đã nối danh sách đơn, Customer cancel, DTO/query/service và PUT trạng thái Admin, wrapper test. Ngày17/11 CompleteForUserAsync đã có nullable return, kiểm tra Shipped/Completed, timestamp, lưu/commit và catch concurrency; còn thiếu map/return OrderResponse sau commit, build mới lỗi CS0161. Phiên sau bổ sung response rồi nối POST complete; còn GET đơn Admin và khóa cấu hình Product có OrderItem. Chưa tick thực hành."
       },
       {
         "id": "day-22-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test hủy lặp/hủy đồng thời/trạng thái không hợp lệ/user khác; kiểm tra tồn và dữ liệu đơn."
+        "description": "Người dùng xác nhận danh sách chạy, Customer hủy/hoàn kho/hủy lặp giữ kho-timestamp/khác chủ404 và Admin Pending→Paid. Chưa xác nhận riêng các case Admin còn lại, phân trang/lọc, complete hoặc race hủy/hủy và hủy/Paid. Không có test tự động mới16/11; chưa tick kiểm chứng."
       },
       {
         "id": "day-22-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Customer/Admin chỉ đổi trạng thái hợp lệ và hoàn kho đúng một lần."
+        "description": "Đã cập nhật bàn giao17/11: lỗi catch/finally đã sửa, build mới còn CS0161 thiếu return response trong complete. Không có HTTP/test tự động mới. Phiên sau bổ sung response, build rồi nối controller Customer xác nhận nhận hàng; giữ rõ các case chưa kiểm chứng."
       }
     ]
   },

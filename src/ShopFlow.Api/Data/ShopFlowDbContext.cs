@@ -16,6 +16,10 @@ public class ShopFlowDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Cart> Carts { get; set; }
 
+    public DbSet<CartItem> CartItems { get; set; }
+
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -96,6 +100,33 @@ public class ShopFlowDbContext : DbContext
         });
 
 
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.ToTable("CartItems", table =>
+            {
+                // Mỗi dòng giỏ chỉ nhận từ 1 đến 99 sản phẩm.
+                table.HasCheckConstraint("CK_CartItems_Quantity", "\"Quantity\" BETWEEN 1 AND 99");
+            });
+
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Quantity).IsRequired();
+
+            // Một sản phẩm chỉ có một dòng trong cùng giỏ.
+            entity.HasIndex(item => new { item.CartId, item.ProductID }).IsUnique();
+
+            // Xóa giỏ thì xóa các dòng thuộc giỏ đó.
+            entity.HasOne(item => item.Cart)
+                  .WithMany(cart => cart.Items)
+                  .HasForeignKey(item => item.CartId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Không cho xóa vật lý sản phẩm đang được giỏ tham chiếu.
+            entity.HasOne(item => item.Product)
+                  .WithMany()
+                  .HasForeignKey(item => item.ProductID)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<Cart>(entity =>
         {
             entity.ToTable("Carts");
@@ -112,6 +143,60 @@ public class ShopFlowDbContext : DbContext
             entity.HasOne(c => c.User)
                   .WithOne(u => u.Cart)
                   .HasForeignKey<Cart>(c => c.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Orders", table =>
+            {
+                table.HasCheckConstraint("CK_Orders_TotalAmount", "\"TotalAmount\" > 0");
+                table.HasCheckConstraint("CK_Orders_Status",
+                    "\"Status\" IN ('Pending', 'Paid', 'Shipped', 'Completed', 'Cancelled')");
+            });
+
+            entity.HasKey(order => order.Id);
+            entity.Property(order => order.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(order => order.TotalAmount).HasPrecision(18, 2).IsRequired();
+            entity.Property(order => order.ShippingAddress).HasMaxLength(500).IsRequired();
+            entity.Property(order => order.CreatedAt).HasColumnType("timestamp with time zone").IsRequired();
+            entity.Property(order => order.PaidAt).HasColumnType("timestamp with time zone").IsRequired(false);
+            entity.Property(order => order.ShippedAt).HasColumnType("timestamp with time zone").IsRequired(false);
+            entity.Property(order => order.CompletedAt).HasColumnType("timestamp with time zone").IsRequired(false);
+            entity.Property(order => order.CancelledAt).HasColumnType("timestamp with time zone").IsRequired(false);
+            entity.Property(order => order.RowVersion).IsRowVersion();
+
+            entity.HasIndex(order => new { order.UserId, order.CreatedAt });
+            entity.HasIndex(order => order.Status);
+            entity.HasOne(order => order.User)
+                  .WithMany()
+                  .HasForeignKey(order => order.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.ToTable("OrderItems", table =>
+            {
+                table.HasCheckConstraint("CK_OrderItems_UnitPrice", "\"UnitPrice\" > 0");
+                table.HasCheckConstraint("CK_OrderItems_Quantity", "\"Quantity\" BETWEEN 1 AND 99");
+            });
+
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Sku).HasMaxLength(50).IsRequired();
+            entity.Property(item => item.ProductName).HasMaxLength(200).IsRequired();
+            entity.Property(item => item.UnitPrice).HasPrecision(18, 2).IsRequired();
+            entity.Property(item => item.Quantity).IsRequired();
+            entity.HasIndex(item => new { item.OrderId, item.ProductId }).IsUnique();
+            entity.HasIndex(item => item.ProductId);
+
+            entity.HasOne(item => item.Order)
+                  .WithMany(order => order.Items)
+                  .HasForeignKey(item => item.OrderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(item => item.Product)
+                  .WithMany()
+                  .HasForeignKey(item => item.ProductId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

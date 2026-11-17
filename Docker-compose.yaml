@@ -13,7 +13,7 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-#set "ConnectionStrings__DefaultConnection=Host=localhost;Port=5433;Database=shopflow;Username=shopflow;Password=123456"
+
   db:
     image: postgres:17
     environment:

@@ -118,4 +118,27 @@ public class AdminProductsController : ControllerBase
         }
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Deactivate(int id)
+    {
+        try
+        {
+            // Service ngừng bán sản phẩm bằng IsActive, không xóa bản ghi.
+            var success = await _productsService.DeactivateAsync(id);
+            if (!success) return NotFound();
+
+            // Đã ngừng bán từ trước cũng trả 204, không có response body.
+            return NoContent();
+        }
+        catch (ProductConcurrencyException ex)
+        {
+            // Sản phẩm bị cập nhật đồng thời giữa lúc service đọc và lưu.
+            return Conflict(new
+            {
+                code = "CONCURRENCY_CONFLICT",
+                message = ex.Message
+            });
+        }
+    }
+
 }

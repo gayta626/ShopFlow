@@ -91,7 +91,7 @@ Luồng khách: đăng ký → đăng nhập → tìm sản phẩm → thêm/s�
 
 Luồng tư vấn: Customer đăng nhập → nêu ngân sách/layout/nhu cầu → chatbot hỏi rõ hoặc tra catalog → hiển thị tối đa 5 thẻ bàn phím → khách mở chi tiết và tự thêm giỏ. Admin không dùng endpoint chat chỉ dành cho Customer.
 
-Luồng admin: đăng nhập → tạo danh mục/sản phẩm và số tồn → xem đơn Pending → xác nhận Paid → Shipped → Completed; có thể hủy Pending/Paid. Paid là xác nhận thanh toán thủ công phục vụ demo, không phát sinh giao dịch tiền thật.
+Luồng admin: đăng nhập → tạo danh mục/sản phẩm và số tồn → xem đơn Pending → xác nhận Paid → Shipped; có thể hủy Pending/Paid. Customer chủ đơn bấm “Đã nhận hàng” để chuyển Shipped → Completed. Paid là xác nhận thanh toán thủ công phục vụ demo, không phát sinh giao dịch tiền thật.
 
 ## 5. Quy tắc nghiệp vụ MVP
 
@@ -150,11 +150,13 @@ Luồng admin: đăng nhập → tạo danh mục/sản phẩm và số tồn �
 | Pending | Cancelled | Chủ đơn Customer hoặc Admin | Hoàn kho đúng một lần |
 | Paid | Shipped | Admin | Ghi ShippedAt |
 | Paid | Cancelled | Admin | Hoàn kho; đánh dấu hủy thanh toán mô phỏng |
-| Shipped | Completed | Admin | Ghi CompletedAt |
+| Shipped | Completed | Chủ đơn Customer | Xác nhận đã nhận hàng, ghi CompletedAt UTC |
 
 Completed và Cancelled là trạng thái kết thúc. Không nhảy cóc hoặc quay lui; chuyển không hợp lệ trả 409. Không tự hết hạn Pending trong MVP, nên kho đã trừ được giữ cho đến khi đơn được xử lý/hủy.
 
 Customer chỉ hủy được Pending. Gọi lại cancel cho đơn đã Cancelled của mình trả 200 và giữ nguyên dữ liệu. Admin gửi lại trạng thái hiện tại trả 200, không thay timestamp hay cộng kho lần nữa. Các trường hợp khác tuân thủ bảng trên.
+
+Thay đổi đã chốt ngày 16/11/2026: Customer xác nhận nhận hàng qua POST /api/orders/{id}/complete, không cần body. UserId lấy từ token; đơn không tồn tại hoặc thuộc người khác trả 404. Chỉ Shipped được chuyển sang Completed; gọi lại cho đơn Completed của mình trả 200 và giữ nguyên CompletedAt. Các trạng thái còn lại trả 409 INVALID_ORDER_STATUS. Thiếu token trả 401, Admin gọi endpoint Customer trả 403. Cập nhật dùng Orders.RowVersion, xung đột trả 409 CONCURRENCY_CONFLICT; không thay tồn kho, giỏ hoặc snapshot đơn. Admin không được chuyển Shipped sang Completed qua endpoint cập nhật trạng thái. MVP không tự hoàn tất theo thời gian và không tích hợp xác nhận giao hàng từ đơn vị vận chuyển; Completed ghi nhận xác nhận của Customer.
 
 Hủy đơn phải cập nhật trạng thái, CancelledAt và hoàn toàn bộ số lượng trong cùng transaction. Products inactive vẫn được hoàn kho. Giữ PaidAt nếu hủy sau Paid để bảo toàn lịch sử; không tuyên bố đã hoàn tiền thật. Không đưa các món đã hủy trở lại giỏ.
 
@@ -236,6 +238,7 @@ Prefix `/api`; JSON camelCase, enum status dạng chuỗi. Mọi ID route phải
 | GET | /orders/me | Customer | 200: phân trang đơn của mình, lọc status |
 | GET | /orders/{id} | Customer | 200: đơn của mình; đơn người khác trả 404 |
 | POST | /orders/{id}/cancel | Customer | 200: chi tiết đơn sau hủy |
+| POST | /orders/{id}/complete | Customer | 200: chủ đơn xác nhận đã nhận hàng từ Shipped; gọi lại Completed giữ nguyên dữ liệu |
 | GET | /admin/orders | Admin | 200: phân trang, lọc status và userId |
 | GET | /admin/orders/{id} | Admin | 200: chi tiết bất kỳ đơn |
 | PUT | /admin/orders/{id}/status | Admin | 200: chi tiết sau cập nhật; body status |

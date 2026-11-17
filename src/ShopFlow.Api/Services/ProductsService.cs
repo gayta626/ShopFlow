@@ -299,4 +299,14 @@ public class ProductsService
 
     }
 
+    public async Task<bool> DeactivateAsync(int id)
+    {
+        var product = await _productRepository.GetByIdForUpdateAsync(id);
+
+        if (product == null) return false;
+        if (product.IsActive == false) return true;
+        else if (product.IsActive == true) product.IsActive = false;
+        await _productRepository.SaveChangAsync();
+        return true;
+    }
 }

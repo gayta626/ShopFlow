@@ -1,6 +1,132 @@
 # ShopFlow — Tiến độ và bàn giao
 
-Cập nhật nội dung tiến độ: 10/11/2026 (Asia/Saigon).
+Cập nhật nội dung tiến độ: 17/11/2026 (Asia/Saigon).
+
+## Cập nhật 17/11 — đã nối Customer xác nhận nhận hàng
+
+- Sau khi trợ lý đọc lại service/controller/repository và build mới thành công 0 warning/0 error, người dùng xác nhận “tôi kiểm rồi nhé”. Ghi nhận đã kiểm tra endpoint complete theo xác nhận chung của người dùng; chưa có kết quả riêng cho gọi lặp/CompletedAt, trạng thái sai, ownership, phân quyền hoặc concurrency. Không coi đây là HTTP/test do trợ lý trực tiếp chạy.
+- Theo yêu cầu viết hộ hai phần, trợ lý bổ sung OrderResponse sau commit trong CompleteForUserAsync, map Items từ snapshot; thêm POST /api/orders/{orderId:int}/complete không body trong OrdersController chỉ Customer. Action lấy userId từ sub, null404, thành công200, lỗi nghiệp vụ/concurrency409.
+- Build mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công 0 warning/0 error. Chưa chạy HTTP hoặc test tự động cho complete; chưa xác nhận runtime ownership, trạng thái, gọi lặp/CompletedAt hoặc concurrency. DTO OrderResponse hiện chưa có các timestamp vòng đời, nên kiểm tra CompletedAt qua DB.
+- Tiếp theo rebuild API rồi kiểm thử Customer chủ đơn Shipped→Completed, gọi lại giữ timestamp, trạng thái sai409, khác chủ404, thiếu token401 và Admin403. Không commit; không tick thêm tiến độ chỉ dựa trên build.
+
+## Kết phiên 17/11 — CompleteForUserAsync còn thiếu response
+
+- Đã đọc code đã lưu: người dùng đổi kiểu trả về thành Task<OrderResponse?>, lấy đơn theo ownership, null trả null; chỉ Shipped→Completed, ghi CompletedAt UTC và lưu; đơn đã Completed bỏ qua thay đổi/lưu, giữ timestamp; commit và catch concurrency bằng IsConcurrencyConflict/ex→OrderConcurrencyException đã đúng theo đọc code. Không thay kho/giỏ.
+- Build mới cuối phiên: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thất bại 1 lỗi CS0161 tại OrderService.cs:299, CompleteForUserAsync chưa trả giá trị trên nhánh có đơn sau commit. Lỗi thiếu catch/finally ngày16/11 đã được sửa; không giao lại phần đó.
+- Phiên sau chỉ cần người dùng bổ sung return new OrderResponse/map Items từ snapshot sau CommitAsync, giống hàm cancel/Admin hiện có; build lại rồi nối POST /api/orders/{id}/complete chỉ Customer. Controller complete hiện chưa có. Chưa chạy HTTP/test tự động hoặc có bằng chứng runtime mới cho complete; không coi đọc code là đã kiểm chứng nghiệp vụ.
+- Đã cập nhật learning-plan buổi22 với lỗi mới và bước tiếp theo, giữ30 buổi/120 ID. Giữ học/tổng kết đã tick; thực hành/kiểm chứng chưa đủ để tick thêm. Không sửa backend, không commit, không rebuild tracker khi kết phiên.
+- Chưa đọc lại được web tracker ngày17/11: localhost8091 từ chối kết nối; thử docker compose up -d --no-build tại PersonalProgress thất bại vì Docker Linux engine không chạy. Không có mục mới đủ điều kiện tick, không ghi lại timestamp cũ. Nội dung plan đã lưu và sẽ được tracker đọc khi chạy lại; không xóa volume.
+
+## Kết phiên 16/11 — tiếp tục hàm Customer xác nhận nhận hàng đang viết dở
+
+- Đã đọc code đã lưu và build cuối phiên mới: thất bại CS1524 tại OrderService.cs:307, thiếu catch/finally trong CompleteForUserAsync đang viết dở. Hàm hiện trả Task<OrderResponse> nhưng có return null; khi hoàn thiện đổi thành Task<OrderResponse?> và bổ sung đủ nhánh trả về. Không sửa backend khi kết phiên, giữ nguyên bài người dùng. Build pass trước đó trong phiên không đại diện cho code cuối phiên.
+- Đã hoàn thiện DTO UpdateOrderStatusRequest (Required/public nullable Status), query Admin có tracking/Items/Product và wrapper test. Theo yêu cầu, trợ lý sửa UpdateStatusForAdminAsync và tạo AdminOrdersController PUT /api/admin/orders/{orderId:int}/status: Admin chuyển Pending→Paid, Paid→Shipped, hủy Pending/Paid; lặp giữ nguyên, kiểm tra enum, timestamp UTC, hoàn kho checked, lưu/commit trước response và bắt concurrency. Không cho Admin chuyển Shipped→Completed.
+- Người dùng xác nhận bước Admin Pending→Paid chạy được sau hướng dẫn Postman. Sau đó nói “rồi tiếp tục” trước khi học complete: không coi là xác nhận riêng các case Paid lặp/Shipped/Admin bị chặn Completed/hủy Paid/giữ PaidAt/phân quyền. Bộ case này còn cần kiểm chứng. Không chạy HTTP hay test tự động mới khi kết phiên.
+- Customer hủy đơn và bằng chứng xác nhận trước đó giữ như mục cập nhật16/11 bên dưới; GET danh sách đã chạy nhưng chưa có đủ bằng chứng phân trang/lọc. Chưa test race hủy/hủy hoặc hủy/Paid, rollback cưỡng bức, race sửa cùng giỏ; khóa cấu hình Product có OrderItem và GET đơn phía Admin còn thiếu.
+- Phiên sau người dùng tự hoàn thiện CompleteForUserAsync: validate ownership qua repository đã có, chỉ Shipped→Completed, ghi CompletedAt UTC, lặp Completed giữ nguyên, trạng thái khác OrderRuleException; SaveChangeAsync/commit/map response và bắt concurrency. Không thay kho/giỏ. Sau đó nối POST /api/orders/{id}/complete chỉ Customer và kiểm thử. Không giao lại phần Admin/Customer cancel đã viết.
+- Đã cập nhật nội dung learning-plan buổi22, xác minh giữ30 buổi/120 ID duy nhất. PersonalProgress đã tick và đọc lại day-22-learn/review=true, day-22-build/verify=false vì complete đang dở và bằng chứng còn thiếu. Không thay xác nhận/timestamp ngoài hai mục mới. Không commit, không rebuild tracker.
+
+## Thay đổi nghiệp vụ 16/11 — Customer xác nhận nhận hàng
+
+- Người dùng chốt thay luồng Admin hoàn tất đơn: Admin chỉ chuyển Pending → Paid → Shipped (và hủy Pending/Paid); Customer chủ đơn bấm “Đã nhận hàng” để chuyển Shipped → Completed, ghi CompletedAt UTC. Không cho Admin thực hiện chuyển Shipped → Completed.
+- Spec đã cập nhật POST /api/orders/{id}/complete, không body, lấy userId từ token; thiếu/khác chủ404, trạng thái sai409, Completed gọi lại200 giữ timestamp. Dùng RowVersion chống xung đột, không thay kho/giỏ; không tự hoàn tất theo thời gian.
+- Đây là thay đổi thiết kế, chưa triển khai hoặc kiểm thử. Khi hướng dẫn service Admin, bỏ nhánh chuyển sang Completed; bổ sung service/controller Customer xác nhận nhận hàng và kiểm chứng ownership, trạng thái, gọi lặp, timestamp. Không sửa backend, không build hoặc tick tracker trong lượt chốt thiết kế này.
+
+## Cập nhật 16/11 — Customer hủy đơn, tiếp theo vòng đời đơn phía Admin
+
+- Đã nối GET /api/orders/me, mặc định page1/size20/status nullable. Người dùng xác nhận endpoint chạy sau rebuild; chưa có xác nhận riêng toàn bộ case phân trang/lọc/phân quyền danh sách.
+- Đã viết GetOrderForUpdateAsync(orderId,userId) có tracking, lọc ownership, Include Items/Product; CancelForUserAsync dùng transaction, chỉ hủy Pending, cộng kho bằng checked, ghi CancelledAt UTC, lưu một lần/commit và chuyển lỗi concurrency. Đơn đã Cancelled trả lại dữ liệu không hoàn kho lần nữa.
+- POST /api/orders/{orderId:int}/cancel chỉ Customer: lấy sub, null404, thành công200, lỗi trạng thái/concurrency409. Trợ lý sửa controller và bổ sung hàm chuyển tiếp trong wrapper test theo yêu cầu. Build mới sau sửa thành công 0 warning/0 error; chưa chạy test tự động cho hủy đơn.
+- Ảnh Postman ban đầu 401; sau cập nhật token người dùng xác nhận hủy thành công. Sau bộ hướng dẫn kiểm tra, người dùng xác nhận trạng thái Cancelled/CancelledAt, hoàn kho đúng số lượng, gọi lại200 không đổi kho/timestamp, Customer khác404. Đây là xác nhận người dùng, không phải HTTP/truy vấn DB trực tiếp của trợ lý; chưa kiểm chứng race hủy/hoàn kho.
+- Tiếp theo hướng dẫn Admin cập nhật vòng đời đơn; chưa có AdminOrdersController hoặc service cập nhật trạng thái Admin. Chưa sửa plan/tick tracker trong lượt này. Không commit.
+
+## Kết phiên 15/11 — tiếp theo nối controller danh sách đơn
+
+- Đã đọc code đã lưu và build cuối phiên mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox, 0 warning/0 error. Không sửa backend hoặc commit khi kết phiên. Test checkout1/1 pass là kết quả chạy trước đó trong cùng phiên, không chạy lại khi kết phiên.
+- Người dùng hoàn thiện OrderSummaryResponse (Id/Status/TotalAmount/CreatedAt), OrderListResponse (Items là property có get/set), IOrderRepository và OrderRepository: query AsNoTracking lọc UserId/status dùng chung, CountAsync và sắp CreatedAt/Id giảm dần rồi Skip/Take. OrderService.GetListForUserAsync kiểm tra page>=1, size1–100, enum hợp lệ, tránh tràn offset; đếm/lấy trang tuần tự và map DTO. Trợ lý chỉ bổ sung hai hàm chuyển tiếp tương ứng trong wrapper test theo yêu cầu.
+- Chưa có GET /api/orders/me trong OrdersController; chưa kiểm thử HTTP phân trang/lọc/ownership danh sách. Phiên sau hướng dẫn action Customer lấy sub, query page=1/size=20/status nullable, gọi service, trả200 và ArgumentException400; sau đó rebuild API và kiểm thử. Không giao lại DTO/repository/service đã xong. Các endpoint đọc chi tiết/checkout giữ nguyên.
+- Đã cập nhật learning-plan buổi20–22 theo tiến độ, giữ30 buổi/120 ID. PersonalProgress đã tick và đọc lại day-21-learn/build/review=true; day-20-verify và day-21-verify vẫn false do bằng chứng còn thiếu đã ghi trong kế hoạch. Buổi22 còn dở, chưa tick. Không thay xác nhận/timestamp ngoài ba mục day21; không rebuild tracker.
+- Còn thiếu: bằng chứng riêng HTTP Location, race sửa cùng giỏ/lỗi cưỡng bức giữa lưu, vòng đời/hủy đơn và khóa cấu hình Product khi có OrderItem. Không mở rộng test trước bước controller danh sách đơn chỉ vì checklist. Đã nhắc bỏ comment chứa thông tin kết nối trong Compose, không chép lại giá trị.
+
+## Cập nhật 15/11 — test tranh mua chiếc cuối cùng đã pass
+
+- Người dùng xác nhận các case Postman: ownership chủ đơn200/khách khác404/không token401; giỏ rỗng và địa chỉ sai400; inactive409 và thiếu kho409, giữ giỏ/tồn và không tạo đơn mới. Có response INSUFFICIENT_STOCK do người dùng gửi; các kiểm tra dữ liệu còn lại là xác nhận người dùng, không phải truy vấn trực tiếp của trợ lý.
+- Người dùng viết setup Category/Product tồn1, hai User/Cart/CartItem, cổng đồng bộ và hai context/service. Theo yêu cầu hoàn thiện bài test, trợ lý bổ sung wrapper repository, gọi đồng thời, Assert và finally dọn đúng dữ liệu riêng của lần chạy trong CheckoutIntegrationTests.cs. Không sửa logic production.
+- Test đồng bộ sau khi đọc giỏ/Product; xác nhận cả hai đọc tồn1/cùng RowVersion và đều thử lưu; đúng một response thành công, một OrderConcurrencyException. Context mới xác nhận một đơn Pending/snapshot/giá/tổng đúng, tồn0, giỏ thắng rỗng/Revision1 và giỏ thua còn Quantity1/Revision0. Finally dọn OrderItems/Orders/CartItems/Carts/Product/Category/Users của test.
+- Lần chạy đầu không kết nối được localhost:5434. Đã bật riêng db-test bằng Compose; lần chạy mới dotnet test với filter CheckoutIntegrationTests thành công 1/1 trên PostgreSQL test thật, có biên dịch thành công. Không chạy lại toàn bộ suite; đây là hai lời gọi service, không phải hai HTTP request. Chưa kiểm thử riêng lỗi cưỡng bức giữa lúc lưu checkout hoặc race trên cùng một giỏ. Không commit.
+- Đã giải thích Fact, Guid suffix, navigation/FK, TaskCompletionSource/Interlocked/await, wrapper interface, Record.ExceptionAsync và Task.WhenAll. Tiếp theo giải thích Assert/finally của test vừa hoàn thiện rồi tiếp tục theo tiến độ; không giao lại bài race này.
+
+## Kết phiên 13/11 — mới nhất: checkout đã nối, người dùng xác nhận đã test
+
+- Đã đọc lại OrderRepository, OrderService và OrdersController đã lưu. Build kết phiên mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công 0 warning/0 error. Không sửa backend hoặc commit khi kết phiên.
+- Người dùng tự viết DTO và repository; trợ lý hoàn thiện service/exception, DI và controller theo yêu cầu. Đã giải thích explicit loading, snapshot, RemoveRange, transaction tự động của SaveChanges so với transaction tường minh, await using/commit/rollback.
+- Người dùng xác nhận đã thêm giỏ bằng tài khoản Customer khác và nói “mình test luôn rồi” sau hướng dẫn checkout. Ghi nhận xác nhận chung đã thử checkout; không coi là bằng chứng riêng cho tất cả 201/Location/giỏ rỗng/kho giảm/tổng tiền/snapshot. Trợ lý chưa chạy HTTP hay integration test mới và chưa truy vấn schema AddOrders trực tiếp. Không lưu thông tin đăng nhập/token vào bàn giao.
+- Phiên sau bắt đầu kiểm tra ownership GET /api/orders/{id}: chủ đơn200, Customer khác404, thiếu token401. Bộ này đã giao nhưng chưa có xác nhận. Tiếp theo kiểm tra giỏ rỗng400, địa chỉ sai400, inactive/thiếu kho409 và giữ nguyên giỏ/kho khi thất bại; concurrency/rollback kiểm chứng riêng trong phạm vi checkout.
+- Chưa triển khai danh sách đơn, vòng đời/hủy đơn và khóa cấu hình Product khi đã có OrderItem. Không giao lại DTO/repository/service/controller checkout đã xong; không yêu cầu tạo lại AddOrders. Buổi20 học/thực hành/tổng kết đã đủ; kiểm chứng để mở vì xác nhận runtime còn chung.
+- Đã cập nhật learning-plan buổi19–21, kiểm tra giữ30 buổi/120 ID. PersonalProgress đã ghi và đọc lại day-20-learn/build/review=true, day-20-verify=false; các xác nhận và timestamp ngoài ba mục này giữ nguyên. Không rebuild tracker.
+
+## Cập nhật 13/11 — đã nối DI và controller checkout, chờ kiểm thử HTTP
+
+- Theo yêu cầu người dùng, đăng ký scoped IOrderRepository/OrderRepository và OrderService. Thêm OrdersController chỉ Customer: POST /api/orders lấy userId từ sub, thành công201 với CreatedAtAction/Location; input hoặc giỏ rỗng400, thiếu giỏ404, inactive409/PRODUCT_UNAVAILABLE, thiếu kho409/INSUFFICIENT_STOCK, concurrency409/CONCURRENCY_CONFLICT.
+- Thêm GET /api/orders/{id:int} cùng service/repository đọc AsNoTracking/Include Items, lọc đồng thời Id và UserId: chỉ đọc đơn của mình; đơn thiếu/khách khác404. Dùng snapshot OrderItems cho response, không lấy giá hiện tại từ Product. Bổ sung Code vào OrderRuleException để controller phân biệt lỗi theo spec.
+- Build mới thành công 0 warning/0 error. Chưa chạy HTTP, unit/integration hoặc kiểm chứng rollback/concurrency/ownership trên DB. Tiếp theo rebuild API rồi kiểm thử checkout thành công, Location, giỏ rỗng/kho giảm và các lỗi đã nêu. Không commit.
+
+## Cập nhật 13/11 — hoàn thiện service checkout, chưa nối endpoint
+
+- Người dùng đã viết DTO Orders và OrderRepository/IOrderRepository: đọc Cart trước rồi explicit load Items/Product có tracking, mở transaction, Add, RemoveRange và SaveChangeAsync. Đã đọc code đã lưu.
+- Theo yêu cầu viết nốt service, trợ lý hoàn thiện OrderService.CheckoutAsync: địa chỉ null-safe/Trim 10–500, giỏ thiếu trả null/rỗng báo lỗi, kiểm tra toàn bộ inactive/thiếu kho, tạo Pending và snapshot OrderItems, tính tổng/trừ kho/tăng Revision, thêm đơn/xóa dòng giỏ, lưu một lần rồi commit và map response. Transaction chưa commit được rollback qua await using khi thoát phạm vi.
+- Thêm OrderRuleException và OrderConcurrencyException; bắt DbUpdateConcurrencyException cùng PostgreSQL 40001/40P01 từ đọc/lưu/commit, không tự retry. Controller sẽ cần ánh xạ lỗi nghiệp vụ/xung đột sang 409.
+- Build mới sau thay đổi: thành công 0 warning/0 error. Chưa kiểm thử HTTP, rollback/concurrency hoặc schema database mới. Người dùng nói đã chạy cập nhật DB; trợ lý chưa trực tiếp xác minh AddOrders trong DB.
+- Tiếp theo nối DI/controller checkout và endpoint đọc chi tiết đơn theo ownership cho Location; sau đó kiểm thử. Chưa triển khai khóa cấu hình Product khi có OrderItem. Không commit.
+
+## Kết phiên 13/11 — mới nhất: AddOrders đã kiểm tra, chưa xác minh áp dụng DB
+
+- Đã đọc migration 20261113043832_AddOrders: Up chỉ tạo Orders/OrderItems, đủ FK User Restrict, Order Cascade, Product Restrict; status string/check5 giá trị, tiền numeric18,2/check>0, địa chỉ500, timestamps nullable đúng, xmin rowVersion, unique(OrderId,ProductId), index ProductId/Status/(UserId,CreatedAt). Down xóa OrderItems trước Orders. Không tạo lại migration.
+- Build kết phiên mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox, thành công 0 warning/0 error. Chưa chạy HTTP hoặc unit/integration mới; chưa áp dụng AddOrders hay truy vấn schema đơn hàng. Build không chứng minh DB đã có hai bảng.
+- Giỏ đã có GET/POST/PUT/DELETE và xử lý Revision; người dùng xác nhận sau các hướng dẫn Postman, gồm thử lại POST/PUT sau sửa thiếu bảng và DELETE. Không coi tất cả biên/ownership/concurrency đã pass. Ảnh terminal trước đó xác nhận migration CartItems Done; chưa có bằng chứng tương tự cho AddOrders.
+- Phiên sau: chạy dotnet ef database update --project src/ShopFlow.Api trong terminal đã đặt connection string đúng localhost:5433 (PowerShell); xác minh Orders/OrderItems và migration history. Sau đó học checkout transaction, snapshot giá/tên/SKU, trừ kho/xóa giỏ/tăng Revision atomic. Còn khóa cấu hình Product khi có OrderItem, chưa triển khai; không quên phần này khi nối đơn hàng.
+- Đã cập nhật learning-plan buổi14/16–19, giữ30 buổi/120 ID. PersonalProgress tick học/thực hành/tổng kết buổi16–19; để kiểm chứng16–19 chưa tick vì schema DB/biên/ownership/concurrency còn thiếu; buổi14 thực hành vẫn dở do khóa cấu hình. Giữ xác nhận và timestamp ngoài các mục mới. Không rebuild tracker, không sửa backend hoặc commit trong lượt kết phiên.
+
+## Cập nhật 13/11 — nối PUT/DELETE giỏ hàng
+
+- Bước schema đơn hàng: người dùng tạo OrderStatus, Order, OrderItem và đủ DbSet Orders/OrderItems. Theo yêu cầu hoàn thiện mapping, trợ lý thêm cấu hình Orders/OrderItems: status string/check5 giá trị, decimal18,2/check tiền>0, địa chỉ max500, timestamp UTC/nullable, RowVersion, indexes và FK User Restrict/Order Cascade/Product Restrict, unique(OrderId,ProductId), Quantity1–99. Sửa lỗi cần thiết trong entity: bốn timestamp thành nullable, thiếu dấu chấm phẩy Items, ProducName thành ProductName. Build mới thành công 0 warning/0 error. Chưa tạo migration/cập nhật DB/kiểm thử schema đơn; tiếp theo tạo AddOrders rồi kiểm tra migration.
+- Bằng chứng bổ sung giỏ: ảnh terminal cho thấy AddCartItems được ghi vào migration history và database update Done. Sau đó người dùng xác nhận chung POST/PUT và DELETE đã chạy; không suy diễn tất cả case hoặc concurrency đã pass. Không có kiểm thử HTTP mới do trợ lý chạy.
+
+- Runtime mới: ảnh PUT giỏ403 rồi500. Trợ lý đọc log container api xác nhận PostgreSQL42P01: relation "CartItems" does not exist khi GetByUserIdForUpdateAsync chạy. Database API đang dùng thiếu bảng CartItems; chưa xác định lần database update trước nhắm DB nào. Không coi các xác nhận kiểm thử giỏ trước đây là bằng chứng schema hiện tại. Hướng dẫn áp dụng migration vào đúng DB localhost:5433 với connection string cùng terminal; chưa tự chạy migration hoặc sửa production trong lượt chẩn đoán.
+
+- Lượt sửa tiếp theo theo yêu cầu: đã xóa hàm UpdateAsync giỏ hàng rỗng đặt nhầm và using Dtos.Carts trong CategoriesService; bổ sung Quantity<1 ở CartService.UpdateAsync. Build mới thành công 0 warning/0 error, thay thế trạng thái build lỗi bên dưới. Chưa chạy HTTP/unit/integration PUT/DELETE; tiếp theo người dùng thử đặt số lượng tuyệt đối, validation, thiếu dòng, inactive/thiếu tồn, xóa/lặp404 và kiểm tra tồn không đổi.
+
+- Người dùng báo đã kiểm thử POST; ghi nhận xác nhận chung, chưa có bằng chứng riêng từng case hoặc concurrency. Người dùng viết UpdateCartItemRequest Range1–99, CartService.UpdateAsync/DeleteAsync và RemoveItem repository/interface.
+- Theo yêu cầu chỉ viết controller, trợ lý thêm PUT/DELETE /api/cart/items/{productId:int}, dùng đúng thứ tự productId,userId của service; Customer lấy sub, thành công200 giỏ mới, null404, concurrency409; PUT thêm rule409/input400. Không sửa service người dùng.
+- Build mới thất bại CS0161 tại CategoriesService.cs:145: hàm UpdateAsync(int,int,UpdateCartItemRequest) viết dở không trả đủ giá trị. Chưa sửa phần ngoài phạm vi controller. CartService.UpdateAsync còn kiểm tra Quantity>99 mà thiếu <1 khi gọi trực tiếp; HTTP được DTO Range chặn. Chưa kiểm thử HTTP PUT/DELETE.
+
+## Cập nhật 12/11 — hoàn thiện POST thêm giỏ, chờ kiểm thử
+
+- Người dùng xác nhận bộ GET giỏ rỗng Customer200, thiếu token401, Admin403 sau hướng dẫn; đây là xác nhận người dùng, không phải HTTP do trợ lý chạy.
+- Theo yêu cầu hoàn thiện chỗ sai/thiếu, trợ lý sửa AddCartItemRequest dùng Range, CartRuleException nhận message, thêm CartConcurrencyException; hoàn thiện AddItemAsync kiểm tra input, inactive, số lượng cộng dồn <=99/không vượt Stock, tối đa50 dòng khi thêm mới, tạo CartItem bằng FK hoặc cập nhật Quantity, tăng Revision bằng checked và lưu một lần. Không trừ kho.
+- Người dùng đã bổ sung Include Items có tracking và SaveChangeAsync/interface trước lượt sửa. Trợ lý thêm chuyển DbUpdateConcurrencyException và đúng unique IX_CartItems_CartId_ProductID thành CartConcurrencyException (race thêm cùng sản phẩm có thể chạm unique trước kiểm tra Revision).
+- CartController đã có POST /api/cart/items, Customer, lấy userId từ sub; trả200 giỏ mới/404 thiếu giỏ hoặc sản phẩm/400 input sai/409 CART_RULE_VIOLATION hoặc CONCURRENCY_CONFLICT. GET giữ nguyên.
+- Build mới thành công 0 warning/0 error. Đã rà soát code, chưa chạy HTTP/unit/integration cho POST hoặc chứng minh rollback/concurrency DB. Tiếp theo rebuild API, thử thêm mới/cộng dồn, GET đọc lại, tồn không đổi, validation/thiếu hàng/inactive/ID thiếu; kiểm chứng concurrency riêng sau. Không tạo migration/package/commit trong lượt này.
+
+## Cập nhật 11/11 — đã nối DELETE ngừng bán sản phẩm
+
+- Kiểm tra lại sau khi người dùng lưu ICartRepository: interface đã có GetByUserIdAsync(int userId) trả Task<Cart?>; repository đọc theo UserId, AsNoTracking/Include Items/ThenInclude Product; service map giá/tồn hiện tại, IsAvailable và tổng tiền; controller Customer lấy sub. Build mới thành công 0 warning/0 error, thay thế trạng thái lỗi interface rỗng bên dưới. Chưa chạy HTTP; tiếp theo rebuild API, thử GET giỏ rỗng Customer200, thiếu token401, Admin403. Giỏ có hàng/tổng tiền/availability chờ kiểm chứng khi thêm sản phẩm vào giỏ.
+
+- Theo yêu cầu viết controller giỏ hàng, trợ lý thêm CartController GET /api/cart/items, chỉ Customer, đọc UserId từ sub (sai/thiếu401), gọi GetCartAsync, null404/có giỏ200; đăng ký scoped ICartRepository/CartRepository và CartService trong Program. Đã đọc service mapping và repository Include Items/ThenInclude Product người dùng viết. Build mới thất bại 3 lỗi CS0246 vì ICartRepository.cs trên đĩa rỗng (0 byte), có thể editor chưa lưu; không ghi đè file bài người dùng. Cần lưu/hoàn thiện interface rồi build lại. Chưa kiểm thử HTTP giỏ hàng.
+
+- Theo yêu cầu viết riêng CartItemResponse, trợ lý hoàn thiện file DTO rỗng người dùng tạo trong Dtos/Carts: ProductId/Sku/ProductName/Quantity/UnitPrice/Stock/IsAvailable/LineTotal, có comment nguồn dữ liệu và cách tính ở service. Build mới thành công 0 warning/0 error. Chưa triển khai mapping response/service/endpoint giỏ trong lượt này; tiếp theo người dùng viết CartResponse và luồng đọc giỏ đã hướng dẫn. Chưa trực tiếp xác minh schema CartItems trong DB.
+
+- Đã kiểm tra migration người dùng tạo: 20261111135136_AddCartItems. Up chỉ tạo CartItems (Id identity, CartId/ProductID/Quantity NOT NULL), PK, check Quantity1–99, FK Cart Cascade/Product Restrict, unique(CartId,ProductID) và index ProductID; Down chỉ drop CartItems. Snapshot chỉ bổ sung CartItem/quan hệ/Cart.Items, không thay đổi bảng khác. Người dùng đã bổ sung null! cho navigation; build mới thành công 0 warning/0 error. Chưa áp dụng/xác minh schema DB hoặc chạy test constraint. Tiếp theo người dùng chạy database update bằng connection string host đúng trong cùng terminal.
+
+- Bước giỏ hàng: người dùng thêm CartItem (Id/CartId/Cart/ProductID/Product/Quantity), Cart.Items khởi tạo rỗng và DbSet CartItems. Theo yêu cầu, trợ lý hoàn thiện mapping CartItem: PK, check Quantity1–99, unique(CartId,ProductID), Cart Cascade, Product Restrict. Giữ tên ProductID hiện có của người dùng và chỉ sửa mapping.
+- Build sau mapping thành công 0 error, 2 warning CS8618 ở navigation Cart/Product chưa khởi tạo trong CartItem. Đã hướng dẫn người dùng bổ sung null! theo mẫu entity hiện có; chưa xác nhận đã sửa. Chưa tạo migration, cập nhật DB hoặc kiểm thử constraint; bước tiếp theo xử lý warning rồi tạo/kiểm tra migration CartItems.
+
+- Sau bộ hướng dẫn kiểm thử DELETE, người dùng xác nhận “đúng rồi”: ghi nhận xác nhận của người dùng cho bộ case ngừng bán, Admin đọc inactive/giữ tồn, public404/ẩn danh sách, DELETE lặp204, ID thiếu404 và PUT kích hoạt lại. Trợ lý chưa trực tiếp chạy HTTP; concurrency DELETE chưa kiểm chứng. Tiếp theo hướng dẫn CartItem và mapping giỏ hàng; Cart/Revision đã có, không làm lại. Chưa viết backend cho bước giỏ hàng.
+
+- Người dùng tự viết DeactivateAsync: đọc entity tracking, thiếu trả false, đã inactive trả true, active thì gán IsActive=false và lưu. Đã sửa nhánh return sớm sau hướng dẫn; trợ lý không sửa service.
+- Theo yêu cầu người dùng, trợ lý hoàn thiện action DELETE /api/admin/products/{id:int} trong AdminProductsController: thiếu404, thành công hoặc đã inactive204, ProductConcurrencyException trả409/CONCURRENCY_CONFLICT; kế thừa quyền Admin. Không xóa vật lý, không nhận RowVersion từ client; EF dùng phiên bản lúc service đọc theo spec.
+- Đã giải thích GET mở form khác lần đọc tracking trong PUT; SetOriginalRowVersion đặt điều kiện kiểm tra theo phiên bản client, không tự kiểm tra hoặc tăng phiên bản. DELETE dùng phiên bản EF tự giữ trong request.
+- Build mới ngoài sandbox thành công 0 warning/0 error. Chưa chạy HTTP hoặc kiểm thử concurrency DELETE. Tiếp theo rebuild API Docker, thử DELETE rồi xác minh public404/ẩn danh sách, Admin vẫn đọc inactive, DELETE lặp204, ID thiếu404, PUT kích hoạt lại với phiên bản mới. Không commit.
 
 Quy tắc làm việc đã được tách sang [AGENTS.md](AGENTS.md) ngày 10/11/2026. File này giữ tiến độ, bằng chứng và lịch sử bàn giao; các hướng dẫn theo phiên cũ bên dưới chỉ là bối cảnh lịch sử.
 

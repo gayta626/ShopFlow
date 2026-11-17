@@ -12,7 +12,8 @@
 - Người dùng học backend .NET bằng cách tự viết. Nêu bước tiếp theo và mục tiêu trước; nếu chưa biết thì giải thích hàm cần làm gì; nếu vẫn cần hỗ trợ mới đưa khung TODO. Không đưa lời giải hoặc khung ngay trừ khi được yêu cầu.
 - Khi người dùng chưa hiểu mục đích, giải thích bằng luồng cụ thể trong ShopFlow: phần đó nằm ở đâu, nhận gì và tạo kết quả gì. Dùng mũi tên hoặc sơ đồ phù hợp, không chỉ giải thích lý thuyết chung.
 - Gom trọn một phần nghiệp vụ mỗi lượt, gồm khai báo và sử dụng; không ngắt để kiểm tra từng field hoặc constructor.
-- Khi được yêu cầu khung, cung cấp khung điền khuyết với comment giải thích từng dòng trong luồng ShopFlow. Cho sẵn cú pháp, chừa biểu thức cần học. Có thể tạo file khung thật khi phù hợp, nhưng đọc file hiện có trước để không đè bài người dùng.
+- Khi được yêu cầu khung, cung cấp khung điền khuyết. Cho sẵn cú pháp, chừa biểu thức cần học; chỉ comment các bước khó hiểu trong luồng ShopFlow. Có thể tạo file khung thật khi phù hợp, nhưng đọc file hiện có trước để không đè bài người dùng.
+- Từ 11/11/2026: phần code đơn giản, dễ hiểu không cần comment giải thích (ví dụ thuộc tính DTO, khai báo hoặc phép gán rõ nghĩa). Chỉ thêm comment khi cần giải thích nghiệp vụ, lý do kỹ thuật khó hiểu hoặc khi người dùng yêu cầu.
 - Nếu placeholder khiến code chưa build được, nói rõ và chỉ build sau khi đã điền.
 - Hướng dẫn ngắn, cụ thể. Lịch mong muốn là 4 giờ/ngày; 30 buổi chỉ là ước lượng, không phải cam kết hoàn thành MVP trong 120 giờ.
 
