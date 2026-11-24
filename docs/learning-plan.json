@@ -425,25 +425,25 @@
         "id": "day-14-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Đã học PUT, SKU loại trừ ID hiện tại, tracking, uint/uint?, RowVersion/xmin và OriginalValue. Đã giới thiệu khóa cấu hình sau khi có OrderItem; chi tiết sẽ làm khi có schema đơn hàng."
+        "description": "Đã học PUT, RowVersion/xmin, OriginalValue và khóa cấu hình khi có OrderItem. Phân biệt giá catalog với snapshot đơn; cùng SKU phải giữ danh tính cấu hình và kho."
       },
       {
         "id": "day-14-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Đã có PUT RowVersion và DELETE ngừng bán; còn khóa cấu hình sản phẩm sau khi có OrderItem, chưa hoàn tất toàn bộ thực hành."
+        "description": "Đã hoàn thiện PUT RowVersion, DELETE ngừng bán và khóa 7 trường cấu hình khi có OrderItem: query AnyAsync, so sánh dữ liệu chuẩn hóa trước gán, exception và HTTP409. Build cuối phiên18/11 thành công."
       },
       {
         "id": "day-14-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Build đã qua; người dùng xác nhận PUT và ngừng bán/kích hoạt lại. Chưa kiểm chứng độc lập concurrency và toàn bộ case validation/SKU/FK."
+        "description": "Ảnh Postman18/11: đổi cấu hình Product1 có đơn trả409 PRODUCT_CONFIGURATION_LOCKED; giữ cấu hình/đổi giá trả200. User xác nhận giá catalog1700000; ảnh đơn1 vẫn unitPrice1600000, quantity2, total3200000. Product3 TEST-CONFIG-001 mới đổi White trả200, rowVersion789. Chưa kiểm chứng race checkout/cập nhật cấu hình, concurrency PUT và toàn bộ validation/SKU/FK; giữ mục kiểm chứng mở."
       },
       {
         "id": "day-14-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Đã bàn giao PUT/DELETE sản phẩm; tiếp tục schema đơn hàng. Nhớ bổ sung khóa cấu hình khi có OrderItem."
+        "description": "Đã tổng kết18/11 khóa cấu hình và snapshot, bằng chứng Postman cùng giới hạn kiểm chứng. Không giao lại phần triển khai đã xong."
       }
     ]
   },
@@ -687,147 +687,147 @@
         "id": "day-22-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Đã nối danh sách đơn, Customer cancel, DTO/query/service và PUT trạng thái Admin, wrapper test. Ngày17/11 CompleteForUserAsync đã có nullable return, kiểm tra Shipped/Completed, timestamp, lưu/commit và catch concurrency; còn thiếu map/return OrderResponse sau commit, build mới lỗi CS0161. Phiên sau bổ sung response rồi nối POST complete; còn GET đơn Admin và khóa cấu hình Product có OrderItem. Chưa tick thực hành."
+        "description": "Đã hoàn thiện danh sách Customer/Admin, chi tiết đơn Customer/Admin, Customer cancel/complete, Admin cập nhật trạng thái, wrapper test và khóa cấu hình sản phẩm có OrderItem. Build cuối phiên18/11 thành công0 warning/0 error."
       },
       {
         "id": "day-22-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Người dùng xác nhận danh sách chạy, Customer hủy/hoàn kho/hủy lặp giữ kho-timestamp/khác chủ404 và Admin Pending→Paid. Chưa xác nhận riêng các case Admin còn lại, phân trang/lọc, complete hoặc race hủy/hủy và hủy/Paid. Không có test tự động mới16/11; chưa tick kiểm chứng."
+        "description": "User xác nhận danh sách và chi tiết Admin chạy; ảnh GET Admin đơn1 trả200. Complete đã có xác nhận chung17/11. Giữ các xác nhận Customer hủy/hoàn kho/lặp/khác chủ404 và Admin Pending→Paid trước đó. Chưa đủ bằng chứng riêng phân trang/lọc/query sai, Admin404/403, toàn bộ vòng đời/complete/timestamp và race hủy/hủy, hủy/Paid; chưa tick kiểm chứng."
       },
       {
         "id": "day-22-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Đã cập nhật bàn giao17/11: lỗi catch/finally đã sửa, build mới còn CS0161 thiếu return response trong complete. Không có HTTP/test tự động mới. Phiên sau bổ sung response, build rồi nối controller Customer xác nhận nhận hàng; giữ rõ các case chưa kiểm chứng."
+        "description": "Bàn giao18/11: code vòng đời và đọc đơn Admin đã hoàn thiện, build qua; cập nhật bằng chứng khóa cấu hình/snapshot. Phiên sau sang buổi23 kiểm thử mua hàng trong phạm vi còn thiếu, bắt đầu hủy lặp đồng thời và hoàn kho đúng một lần; không giao lại complete/GET Admin/khóa cấu hình."
       }
     ]
   },
   {
     "day": 23,
-    "title": "Ngày đệm: kiểm thử mua hàng",
-    "goal": "Luồng mua–thanh toán–hủy có bằng chứng kiểm thử.",
+    "title": "Kiểm thử mua hàng: concurrency, rollback và HTTP",
+    "goal": "Đợt kiểm thử mua hàng đã chạy: toàn suite 87/87 pass ngày 20/11; phân biệt test service cạnh tranh với HTTP và phần MVP chưa kiểm chứng.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-23-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Lập ma trận tình huống cart/checkout/order theo spec."
+        "description": "Đã giải thích vai trò test so với RowVersion/transaction, hủy lặp và hủy đồng thời. Người dùng giao trợ lý viết phần test; đọc luồng Arrange/Act/Assert và cổng đồng bộ trên các test đã có."
       },
       {
         "id": "day-23-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Viết các integration tests còn thiếu và sửa lỗi transaction/concurrency."
+        "description": "Đã thêm 68 case cho concurrency/rollback, vòng đời, snapshot, khóa cấu hình, giỏ, query và HTTP; cùng test hủy/hủy đã có. Helper dữ liệu riêng GUID, cleanup, API loopback và JWT key riêng. Không sửa production hoặc thêm package."
       },
       {
         "id": "day-23-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Chạy kịch bản nhiều khách đồng thời; đối chiếu tồn/đơn, ghi kết quả thật và các lỗi còn lại."
+        "description": "20/11: dotnet test toàn suite 87/87 pass trên PostgreSQL test sau khi sửa kỳ vọng Contains và cách ly các nhóm test dùng chung DB/trigger. Có 10 service checkout cạnh tranh, hủy/Paid, checkout/sửa giỏ/cấu hình, rollback sau SQL trước commit; 21 case HTTP. Chưa coi là đủ toàn bộ IT01–IT20 hoặc 10 HTTP checkout đồng thời."
       },
       {
         "id": "day-23-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Luồng mua–thanh toán–hủy có bằng chứng kiểm thử."
+        "description": "Đã ghi kết quả và giới hạn vào notes ngày20/11; không giao lại bài test mua hàng đã xong. Tiếp theo buổi24 React khung/catalog; còn các phần backend chung và phạm vi MVP khác được theo dõi riêng."
       }
     ]
   },
   {
     "day": 24,
-    "title": "React: khung và catalog",
-    "goal": "Có trang danh sách/chi tiết sản phẩm gọi API thật.",
+    "title": "React: trang chủ, danh sách và chi tiết sản phẩm",
+    "goal": "Đã triển khai React trang chủ, catalog và chi tiết/gallery; có kiểm chứng UI ngày21/11. Ảnh hiện là minh họa, chưa upload theo SKU.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-24-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Thống nhất luồng màn hình, routing và cấu hình API; trợ lý hỗ trợ viết frontend."
+        "description": "Đã duyệt hướng thiết kế trắng-đen-cam, navbar/bo góc; giải thích React riêng với API/database Docker, proxy /api và build/preview. Người dùng giao trợ lý viết frontend từng trang. Không coi là đã học toàn bộ React."
       },
       {
         "id": "day-24-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Dựng React, layout, danh sách/chi tiết; trạng thái loading, empty và error."
+        "description": "Đã có homepage, /catalog tìm kiếm/lọc/sort/phân trang/query string và /products/{id} gallery/lightbox, gợi ý cùng layout, loading/error/404/retry. Trợ lý viết frontend theo yêu cầu."
       },
       {
         "id": "day-24-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Thử bộ lọc/phân trang trên giao diện, mobile và API lỗi; bạn giải thích request/response."
+        "description": "Bằng chứng21/11: check-home/catalog/product pass với dữ liệu đọc API thật, gallery/bàn phím, lỗi giả lập và responsive320–2560. Build React mới23/11 pass; không gọi test lịch sử là lần chạy mới."
       },
       {
         "id": "day-24-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Có trang danh sách/chi tiết sản phẩm gọi API thật."
+        "description": "Notes/README đã ghi các màn hình và giới hạn ảnh minh họa, thiếu API upload/banner. Preview4173 do Vite dev vướng đường dẫn C#; chưa Docker hóa FE."
       }
     ]
   },
   {
     "day": 25,
     "title": "React: đăng nhập và mua hàng",
-    "goal": "Người dùng thao tác giỏ/checkout và xem đơn từ giao diện.",
+    "goal": "Đã nối xác thực, hồ sơ GET/PUT, giỏ, checkout demo và đơn Customer. Còn E2E ghi thật và thanh toán thẻ thật.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-25-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Thống nhất quản lý phiên đăng nhập và lỗi 401/403."
+        "description": "Đã giải thích token bộ nhớ, reload mất phiên,401/403 và role; chưa mặc định người dùng đã tự giải thích toàn bộ cơ chế."
       },
       {
         "id": "day-25-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Nối login/register, cart, checkout và lịch sử đơn với API."
+        "description": "Đã nối login/register/welcome/account/cart/checkout demo và đơn hàng. Hồ sơ GET/PUT /api/auth/me đã nối ProfileEditor, cập nhật session và lỗi; header chung trên account."
       },
       {
         "id": "day-25-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test mua hàng trọn luồng, refresh trang, hết phiên, hết tồn; kiểm tra thông báo lỗi rõ ràng."
+        "description": "23/11 check-auth pass mock lưu hồ sơ, validation/conflict/401/network và responsive. User xác nhận chung API hồ sơ; chưa đủ bằng chứng toàn bộ E2E Customer thật. Build React mới 24/11 pass."
       },
       {
         "id": "day-25-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Người dùng thao tác giỏ/checkout và xem đơn từ giao diện."
+        "description": "Notes ghi phạm vi và giới hạn mock; còn E2E thật và tự giải thích. Thanh toán thẻ thật chưa làm."
       }
     ]
   },
   {
     "day": 26,
     "title": "React: quản trị",
-    "goal": "Admin quản lý catalog và đơn hàng từ giao diện.",
+    "goal": "Đã có UI Admin sản phẩm, đơn hàng và CRUD danh mục. Đang học backend ảnh sản phẩm trước chatbot; còn upload/gallery thật và E2E Admin.",
     "minutes": 240,
     "blocks": [
       {
         "id": "day-26-learn",
         "title": "Hiểu bài và chuẩn bị",
         "minutes": 45,
-        "description": "Chốt form dữ liệu và cách hiển thị lỗi validation/concurrency."
+        "description": "Đã đối chiếu DTO/RowVersion/quy tắc trạng thái và giải thích lỗi SKU/configuration locked/concurrency; chưa xác nhận người dùng hiểu toàn bộ."
       },
       {
         "id": "day-26-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Nối CRUD danh mục/sản phẩm và thao tác đơn; phân biệt giao diện Admin/Customer."
+        "description": "Đã nối /admin/products, /admin/orders và /admin/categories CRUD với xác nhận đổi tên/lỗi danh mục đang dùng. Phần UI cơ bản xong; backend ảnh có entity/migration và local storage, chưa repository/service/controller upload hoặc FE upload."
       },
       {
         "id": "day-26-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "Test form sai, SKU trùng, version cũ và không đủ quyền; kiểm tra API vẫn tự bảo vệ quyền."
+        "description": "23/11 Admin danh mục pass mock validation/confirmRename/conflict/quyền/responsive; storage 9/9 test lịch sử. 24/11 build solution và React pass, API Release/publish nhận license. Chưa E2E Admin thật, chưa Docker build do engine tắt."
       },
       {
         "id": "day-26-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Ghi vào notes: đã làm gì, bằng chứng build/test, lỗi còn lại. Tự giải thích phần vừa học và đối chiếu mục tiêu: Admin quản lý catalog và đơn hàng từ giao diện."
+        "description": "Notes bàn giao: tiếp theo IProductImageRepository/ProductImageRepository, rồi nghiệp vụ upload/xóa ảnh, DI, URL và volume. Chưa tick verify/review khi thiếu kiểm chứng thật/tự giải thích."
       }
     ]
   },

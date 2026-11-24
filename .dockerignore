@@ -6,4 +6,5 @@
 .vs/
 .vscode/
 .env
+**/sixlabors.lic
 .env.*

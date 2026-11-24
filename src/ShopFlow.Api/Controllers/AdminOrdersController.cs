@@ -42,4 +42,27 @@ public class AdminOrdersController : ControllerBase
             return Conflict(new { code = "CONCURRENCY_CONFLICT", message = ex.Message });
         }
     }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var response = await _orderService.GetByIdForAdminAsync(id);
+        if (response == null) return NotFound();
+
+        return Ok(response);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetOrders(int page = 1, int size = 20, OrderStatus? status = null)
+    {
+        try
+        {
+            var response = await _orderService.GetListForAdminAsync(page, size, status);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

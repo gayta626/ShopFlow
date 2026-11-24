@@ -25,9 +25,21 @@ Hiện trạng repo: solution `ShopFlow.slnx`, API và test cùng target `net10.
 
 ### Không thuộc MVP
 
+**Yêu cầu bổ sung ngày 21/11/2026:** người dùng muốn thanh toán thẻ thật ở giai đoạn sau; làm trước giao diện chọn phương thức trên checkout, ghi backlog backend. Đây là yêu cầu mở rộng đã ghi nhận, chưa phải tích hợp hoặc thu tiền thật. Giữ luồng demo hiện tại cho đến khi hoàn thành phần thanh toán. Xem mục “Thanh toán thẻ thật — backlog” bên dưới.
+
 Đánh giá, báo cáo, coupon, CSV, cache, Serilog nâng cao; thanh toán và hoàn tiền thật; vận chuyển tích hợp; hệ thống biến thể nhiều tầng, tự ráp bàn phím, linh kiện rời và mặt hàng khác; upload ảnh; refresh token, quên mật khẩu, email xác nhận; đa cửa hàng, microservices, Redis, message broker, CQRS/MediatR, Clean Architecture nhiều project. Lịch sử chat lưu dài hạn, RAG/embeddings và vector database để sau khi có nhu cầu thực tế.
 
 ## 2. Phương án và quyết định
+
+### Thanh toán thẻ thật — backlog (21/11/2026)
+
+- Frontend trước: lựa chọn thẻ tín dụng/ghi nợ, khu vực giải thích chuyển sang cổng thanh toán, trạng thái sắp hỗ trợ; giữ phương thức demo để thử tạo đơn. Khi chọn thẻ ở bản chưa tích hợp, không tạo đơn hay gọi thanh toán. Chưa thu thập số thẻ/CVV. Khi tích hợp xong cần màn đang xử lý/thành công/thất bại/hủy/hết hạn và khả năng xem lại kết quả.
+- Chưa chọn nhà cung cấp. Khi triển khai, khảo sát cổng hỗ trợ đơn vị kinh doanh, tiền tệ và loại thẻ cần dùng, điều kiện tài khoản merchant, phí và môi trường thử nghiệm theo tài liệu chính thức lúc đó. Không mặc định hỗ trợ một thương hiệu thẻ hoặc cổng cụ thể.
+- Backend cần tạo phiên thanh toán gắn với đơn thuộc người dùng; số tiền/tiền tệ lấy từ dữ liệu đơn phía server. Dùng trang thanh toán do nhà cung cấp lưu trữ hoặc thành phần token hóa của họ; không lưu/log số thẻ đầy đủ hoặc CVV trong ShopFlow.
+- Lưu giao dịch/lần thanh toán, mã tham chiếu nhà cung cấp, số tiền/tiền tệ và trạng thái; thiết kế idempotency cho tạo đơn/tạo phiên thanh toán, xử lý timeout và truy vấn lại trạng thái để tránh thu tiền hai lần.
+- Xác minh chữ ký webhook theo nhà cung cấp, đối chiếu đơn/số tiền/tiền tệ/trạng thái; xử lý webhook lặp hoặc đến sai thứ tự. Chỉ chuyển đơn sang Paid sau xác nhận đáng tin cậy phía server, không dựa riêng vào return URL hay dữ liệu frontend. Tách quyền đánh dấu Paid demo khỏi đơn thanh toán thật.
+- Chốt lại giữ/trừ/hoàn kho khi thanh toán chờ, thất bại/hết hạn, hủy đồng thời hoặc webhook thành công đến muộn. Hoàn tiền và hủy đơn đã trả tiền cần thiết kế riêng; không mặc định hủy trạng thái đơn là đã hoàn tiền.
+- Test sandbox trước: thành công/thất bại/hủy, xác thực bổ sung nếu cổng yêu cầu, timeout, retry/webhook lặp, sai chữ ký/số tiền, quyền sở hữu, race thanh toán/hủy và đối soát. Chỉ bật live sau khi hoàn thiện cấu hình merchant, secrets, HTTPS và kiểm chứng tích hợp. Chưa triển khai hay kiểm thử các mục này.
 
 | Phương án | Đánh đổi | Kết luận |
 |---|---|---|

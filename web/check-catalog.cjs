@@ -1,0 +1,57 @@
+async page => {
+  const errors=[]; page.on('pageerror',error=>errors.push(error.message));
+  const base='http://127.0.0.1:4173';
+  await page.goto(base+'/catalog');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.locator('.catalog-grid .product-card').first().waitFor();
+  for(const width of [2560,1440,1024,768,390,320]){
+    await page.setViewportSize({width,height:900});
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Overflow '+width);
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await page.locator('select[name=sort]').selectOption('priceAsc');
+  await page.waitForURL(/sort=priceAsc/);
+  await page.locator('.catalog-grid .product-card').first().waitFor();
+  let response=await page.request.get(base+'/api/products?sort=priceAsc&size=12');
+  let data=await response.json();
+  if(JSON.stringify(await page.locator('.catalog-grid h3').allTextContents())!==JSON.stringify(data.items.map(p=>p.name)))throw Error('Sort/API mismatch');
+  await page.locator('select[name=size]').selectOption('2');
+  await page.waitForURL(/size=2/);
+  await page.getByRole('link',{name:'Trang sau',exact:true}).click();
+  await page.waitForURL(/page=2/);
+  await page.locator('.catalog-grid .product-card').first().waitFor();
+  if(await page.locator('.catalog-grid .product-card').count()!==1)throw Error('Page2 mismatch');
+  await page.reload();
+  await page.locator('.catalog-grid .product-card').first().waitFor();
+  if(await page.locator('select[name=sort]').inputValue()!=='priceAsc')throw Error('Lost sort');
+  await page.getByLabel('Giá từ',{exact:true}).fill('2000000');
+  await page.getByLabel('Giá đến',{exact:true}).fill('1000000');
+  await page.getByRole('button',{name:'Áp dụng bộ lọc'}).click();
+  await page.getByText('Giá từ không được lớn hơn giá đến.').waitFor();
+  await page.goto(base+'/catalog?connectivity=Bluetooth');
+  await page.locator('.catalog-grid .product-card').first().waitFor();
+  response=await page.request.get(base+'/api/products?connectivity=Bluetooth&size=12');data=await response.json();
+  if(await page.locator('.catalog-grid .product-card').count()!==data.items.length)throw Error('Connectivity filter');
+  await page.getByLabel('Tên hoặc SKU',{exact:true}).fill('NO-SUCH-SKU');
+  await page.getByRole('button',{name:'Áp dụng bộ lọc'}).click();
+  await page.getByRole('heading',{name:'Chưa có bàn phím phù hợp'}).waitFor();
+  await page.getByRole('link',{name:'Xóa tất cả',exact:true}).click();
+  await page.locator('.catalog-grid .product-open').first().click();
+  await page.waitForURL(/\/products\/\d+/);await page.locator('.detail-summary h1').waitFor();await page.goto(base+'/catalog');
+  await page.route('**/api/products?**',route=>route.fulfill({status:503,body:'Unavailable'}));
+  await page.reload();await page.getByRole('heading',{name:'Chưa thể tải sản phẩm'}).waitFor();
+  await page.unroute('**/api/products?**');await page.getByRole('button',{name:'Thử lại',exact:true}).click();
+  await page.locator('.catalog-grid .product-card').first().waitFor();
+  await page.evaluate(async()=>{await document.fonts.ready;document.querySelectorAll('img').forEach(img=>img.loading='eager');await Promise.all([...document.images].map(img=>img.decode().catch(()=>{})));window.scrollTo({top:0,behavior:'instant'});});
+  if(await page.locator('img').evaluateAll(es=>es.some(e=>e.complete&&!e.naturalWidth)))throw Error('Broken image');
+  await page.screenshot({path:'.playwright-cli/catalog-desktop.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'.playwright-cli/catalog-mobile.png',fullPage:true});
+  await page.goto(base+'/');await page.locator('#products .product-card img').first().waitFor();
+  await page.getByRole('button',{name:'Mở menu',exact:true}).click();
+  await page.getByRole('textbox',{name:'Tìm bàn phím',exact:true}).fill('Demo');
+  await page.getByRole('button',{name:'Tìm kiếm',exact:true}).click();await page.waitForURL(/catalog\?q=Demo/);
+  await page.locator('.catalog-grid .product-card').first().waitFor();
+  await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/catalog');
+  if(errors.length)throw Error(errors.join(';'));
+  return {passed:true,checks:['API sort','real pagination size2 page2','reload query','price validation','connectivity filter','empty/reset','dialog','503/retry','image loads','home search navigation'],widths:[2560,1440,1024,768,390,320],errors};
+}

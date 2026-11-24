@@ -50,7 +50,7 @@ public class AuthController : ControllerBase
 
     [Authorize] // Chỉ cho phép truy cập khi JWT đã được xác thực thành công.
     [HttpGet("me")] // GET /api/auth/me; token gửi qua header, không cần body đăng nhập.
-    public IActionResult Me() // Đọc claim có sẵn trong User nên không cần async.
+    public async Task<IActionResult> Me()
     {
         var subject = User.FindFirst("sub")?.Value; // Lấy UserId từ claim sub của token.
         var role = User.FindFirst(ClaimTypes.Role)?.Value; // Lấy role từ token đã xác thực.
@@ -60,7 +60,13 @@ public class AuthController : ControllerBase
             return Unauthorized(); // Từ chối nếu thiếu hoặc sai định dạng claim cần thiết.
         }
 
-        return Ok(new { userId, role }); // Trả 200 cùng danh tính trong token; không truy vấn database.
+        var response = await _authService.GetProfileAsync(userId);
+        if (response == null)
+        {
+            return NotFound(new { message = "Không tìm thấy tài khoản." });
+        }
+
+        return Ok(response);
     }
 
     [Authorize(Roles = "Admin")]
@@ -77,5 +83,36 @@ public class AuthController : ControllerBase
         }
 
         return Ok(new { message = "Ban co quyen Admin" }); // 
+    }
+
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        var subject = User.FindFirst("sub")?.Value; // Lấy UserId từ claim sub của token.
+        var role = User.FindFirst(ClaimTypes.Role)?.Value; // Lấy role từ token đã xác thực.
+        if (!int.TryParse(subject, out var userId) || userId <= 0 || string.IsNullOrWhiteSpace(role))
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var response = await _authService.UpdateProfile(userId, request);
+            if (response == null)
+            {
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+            }
+
+            return Ok(response);
+        }
+        catch (EmailAlreadyExistsException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

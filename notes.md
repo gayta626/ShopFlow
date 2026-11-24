@@ -1,6 +1,278 @@
 # ShopFlow — Tiến độ và bàn giao
 
-Cập nhật nội dung tiến độ: 17/11/2026 (Asia/Saigon).
+## Cập nhật 24/11/2026 — repository và service upload ảnh
+
+- User đã viết IProductImageRepository/ProductImageRepository: đọc danh sách theo ProductId, AsNoTracking, SortOrder/Id tăng dần; tìm ảnh theo cả ProductId/Id có tracking; Add/Remove/SaveChangeAsync. Đã đọc code và build pass trong lượt check.
+- Theo yêu cầu, trợ lý hoàn thiện ProductImageResponse và phần UploadAsync user đang viết trong ProductImageService: trim AltText/null thành rỗng, giới hạn 200 ký tự, SortOrder>=0, sản phẩm thiếu trả null trước lưu file; storage lưu file, repository lưu metadata rồi map response. Nếu bước ghi DB ném lỗi thì thử dọn file bằng CancellationToken.None; lỗi dọn giữ cùng lỗi gốc qua AggregateException. Đây là bù trừ giữa file/DB, không phải transaction atomic giữa hai hệ thống.
+- Kiểm chứng mới: build solution Debug ngoài sandbox thành công 0 warning/0 error; lượt sandbox thất bại không có chẩn đoán. Chưa kiểm thử service upload/HTTP/DB thật hoặc lỗi dọn file; không coi các test storage cũ là test service mới.
+- Ảnh terminal user trong phiên cho thấy docker compose build api hoàn tất Image Built; đây là bằng chứng user cung cấp trước khi hoàn thiện repository/service, không chứng minh image đã chứa code mới.
+- Tiếp theo: nghiệp vụ xóa ảnh, DI/controller, cấu hình thư mục/URL/volume và nối FE; upload chưa gọi được từ HTTP. Không migrate/seed/commit hoặc sửa dữ liệu thật.
+
+## Kết phiên 24/11/2026 — license và bàn giao backend ảnh
+
+- Đọc code đã lưu: LocalProductImageStorage đã triển khai; chưa có IProductImageRepository/ProductImageRepository trên đĩa. Không tự viết thêm backend khi kết phiên.
+- Kiểm chứng mới: build solution Debug ngoài sandbox thành công 0 warning/0 error (lần trong sandbox compiler bị hủy); React build pass, còn cảnh báo đường dẫn chứa #. API Release/publish ở lượt ngay trước đã pass và không kèm file license. Không chạy lại tests nghiệp vụ/browser; 9/9 storage và các test UI là bằng chứng lịch sử.
+- Cập nhật learning-plan buổi 25–26 đúng trạng thái hồ sơ, Admin danh mục và phần ảnh đang học; giữ 30 buổi/120 ID. PersonalProgress đọc được kế hoạch mới; tick riêng day-26-build cho UI Admin đã hoàn thành, giữ verify/review mở do chưa E2E thật/tự giải thích. Không rebuild tracker hoặc sửa volume/mount.
+- Phiên sau: hướng dẫn một phần trọn IProductImageRepository và ProductImageRepository (đọc danh sách theo SortOrder/Id, tìm ảnh theo productId/imageId, Add/Remove/SaveChanges), user tự viết. Sau đó mới nghiệp vụ upload/xóa, DI/controller, URL ảnh, volume và nối FE. Không giao lại storage hoặc license đã xong.
+- Docker build trước đó chưa chạy được do engine chưa hoạt động; chỉ kiểm chứng sau khi Docker Desktop chạy. Không có bằng chứng schema DB độc lập ngoài ảnh EF Done của user. Không commit, migrate, seed hoặc sửa dữ liệu thật.
+
+## Cập nhật 24/11/2026 — cấu hình Six Labors license
+
+- User cung cấp đường dẫn license đã tải. Đã sao chép vào thư mục project API để package tự nhận; chặn sixlabors.lic trong Git và Docker context, đặt không copy ra output/publish. Không ghi nội dung/key license vào tài liệu.
+- Docker Compose truyền license dưới dạng build secret; Dockerfile chỉ mount khi publish Release, không COPY license vào image.
+- Kiểm chứng mới: API build Release và publish thành công, 0 warning/0 error; thư mục publish kiểm tra không có sixlabors.lic; git check-ignore xác nhận bỏ qua file. Chưa chạy lại tests nghiệp vụ.
+- Docker build chưa kiểm chứng: lần đầu sandbox không truy cập buildx lock; chạy ngoài sandbox xác nhận Docker Linux engine chưa hoạt động (không có named pipe). Sau khi mở Docker Desktop, chạy `docker compose build api` để kiểm chứng tiếp. Không chạy/migrate DB, không commit.
+
+## Cập nhật 23/11/2026 — hoàn thiện local image storage
+
+- Theo yêu cầu viết nốt file, trợ lý hoàn thiện LocalProductImageStorage: đầu vào tối đa5MB (giới hạn cả khi đọc stream), JPEG/PNG khớp đuôi, mỗi chiều1–4096, giải mã một frame, ghi lại bằng encoder/SkipMetadata, tên GUID N.jpg/png, CreateNew và dọn file do lần gọi này tạo khi ghi lỗi/hủy. Delete kiểm tra tên, cancellation và xóa file. Sửa lỗi đuôi PNG có khoảng trắng và toán tử kiểm tra kích thước trong bài user.
+- Package ImageSharp4.1.3 đã có do user thêm. Debug build thành công nhưng cảnh báo thiếu Six Labors license; Release yêu cầu license, Dockerfile đang publish Release. Chưa xử lý license, không tự hạ phiên bản/bỏ kiểm tra. Đây là thiếu sót trong hướng dẫn chọn package trước đó cần giải quyết trước Docker build.
+- Thêm LocalProductImageStorageTests dùng ảnh và thư mục tạm riêng. Lần chạy đầu lỗi assertion async trong test; đã sửa. Lần chạy lại từng bị chặn do hạn mức automatic approval review; sau user yêu cầu tiếp tục, chạy mới9/9 pass: PNG/JPEG lưu và đọc lại/xóa, file không tồn tại, sai định dạng/đuôi, chiều quá4096, request đã hủy, tên file không hợp lệ. Chưa kiểm thử hủy giữa lúc ghi hoặc lỗi dọn file; không truy cập DB/ảnh thật.
+- User đã cung cấp ảnh EF database update AddProductImages kết thúc Done ở lượt trước; đây là bằng chứng terminal user, chưa truy vấn schema DB độc lập. Storage chưa nối DI/upload controller/service nghiệp vụ, chưa cấu hình volume ảnh hoặc phục vụ URL ảnh. Không commit.
+
+## Cập nhật 23/11/2026 — entity và mapping ảnh sản phẩm
+
+- User đã viết ProductImage (Id,ProductId,Product,FileName,AltText,SortOrder), Product.Images và DbSet ProductImages. Theo yêu cầu, trợ lý thêm mapping: FileName required/max100/unique, AltText required/max200 (cho phép chuỗi rỗng), SortOrder>=0, index không unique(ProductId,SortOrder), quan hệ Product.Images với FK ProductId/Restrict.
+- Build mới toàn solution pass0 warning/0 error. Chưa tạo migration, chưa cập nhật DB, chưa test nghiệp vụ ảnh. Không commit. Bước tiếp theo tạo/đọc migration trước khi áp dụng.
+- Hướng triển khai đã giải thích: file lưu riêng, DB lưu metadata/tên file do server sinh; Docker cần volume ảnh (chưa cấu hình). Gallery sắp SortOrder rồi Id, ảnh đầu làm đại diện; tối đa10 ảnh/sản phẩm mới là đề xuất, chưa triển khai giới hạn/upload/service/API.
+
+## Cập nhật 23/11/2026 — frontend Admin danh mục
+
+- Thêm /admin/categories và liên kết từ hồ sơ/menu Admin, sản phẩm, đơn hàng; login next hỗ trợ route mới. Trang dùng API Admin: danh sách toàn bộ (không phân trang giả), thêm tên1–100 sau Trim, đổi tên, xóa có xác nhận.
+- PUT đầu gửi confirmRename=false; chỉ khi server báo CATEGORY_RENAME_CONFIRMATION_REQUIRED mới hỏi xác nhận ảnh hưởng sản phẩm, gửi lại đúng tên/ID với true sau khi Admin đồng ý. CATEGORY_EXISTS và POST409 báo trùng; CATEGORY_IN_USE chặn xóa; concurrency/network/kết quả chưa rõ khóa ghi đến GET tải lại.401 xóa phiên, Customer không gọi API Admin. Không sửa backend/DB/package/commit.
+- Build React mới pass. check-admin-categories mới pass mock: danh sách, POST201/409/trim, đổi tên trống/có sản phẩm, hủy xác nhận không ghi, confirmRename đúng, DELETE204/in-use, conflict/network khóa ghi,401/Customer gate; responsive320/390/768/1440 không tràn, không pageerror. Đã xem desktop/mobile, chỉnh toolbar mobile rồi build/chạy lại pass. Chưa kiểm chứng bằng Admin thật, không chạy backend suite mới.
+- Preview4173 phục vụ build mới. Tiếp theo user thử trang danh mục bằng Admin; ảnh SKU/upload, kiểm thử E2E thật, chatbot/deploy và thanh toán thật vẫn còn theo kế hoạch/backlog.
+
+## Cập nhật 23/11/2026 — căn chỉnh menu header
+
+- Thay ký tự ⌄ sau Bàn phím bằng SVG chevron trang trí, căn giữa icon/chữ và các link/button menu bằng inline-flex; khắc phục link Đơn của tôi và mũi tên lệch hàng. Build React pass; trình duyệt đo căn giữa và không tràn ngang ở320/390/768/1060/1280/1440, đã xem ảnh header. Không sửa backend/DB hoặc commit.
+
+## Cập nhật 23/11/2026 — header chung trên hồ sơ
+
+- Theo ảnh phản hồi, thay header rút gọn trên /account bằng Header cửa hàng thông qua StoreHeader: menu/layout, tìm kiếm, giỏ và tài khoản; áp dụng cả /account chưa đăng nhập. Giữ welcome/login/register như hiện có. StoreHeader tải catalog công khai, điều hướng tìm kiếm sang /catalog và sản phẩm sang chi tiết.
+- Build React mới pass; check-auth mới pass với mock, thêm tìm kiếm từ hồ sơ và menu mobile/Escape; luồng lưu hồ sơ và responsive320–1440 vẫn pass. Đã xem ảnh desktop sau sửa. Lần test đầu kế thừa viewport mobile khiến ô tìm kiếm ẩn; đặt viewport desktop rõ ràng rồi chạy lại pass. Không sửa backend/DB, không commit.
+
+## Cập nhật 23/11/2026 — nối frontend hồ sơ
+
+- User báo “rồi ok rồi” sau hướng dẫn Postman hồ sơ; ghi nhận xác nhận chung, không suy diễn mọi case đều pass. Theo yêu cầu tiếp theo, trợ lý nối ProfileEditor GET/PUT /api/auth/me, cập nhật tên/email session từ response và hiển thị thành công. GET khi vào account/welcome đồng bộ thông tin DB. Token vẫn chỉ trong bộ nhớ.
+- Form kiểm tra tên sau Trim/email, khóa gửi lặp và đóng khi đang ghi;400/409 giữ nội dung,401 xóa phiên, network/kết quả chưa rõ khóa lưu đến GET lại. Bỏ phản hồi thuộc phiên cũ; không retry PUT tự động. Không sửa backend/DB/package hoặc commit trong lượt FE này.
+- Build React mới pass. Playwright Edge check-auth mới pass hoàn toàn mock: PUT200/400/409/401/network, body/Bearer/Trim, session cập nhật tên, Back/reload/hết hạn, responsive320/390/768/1440, không pageerror/tràn trang. Đã xem ảnh desktop/mobile. Không ghi dữ liệu thật; chưa E2E lưu hồ sơ bằng tài khoản thật. Không chạy backend suite mới.
+- Preview4173 đã bật lại và phục vụ build mới. Bước tiếp theo: user thử Chỉnh sửa thông tin/Lưu trên tài khoản thật; frontend CRUD danh mục Admin, ảnh SKU/upload và thanh toán thẻ thật vẫn còn trong backlog.
+
+## Cập nhật 23/11/2026 — API hồ sơ
+
+- User tự viết UpdateProfileRequest, GetByIdAsync ở repository và UpdateProfile trong service; theo yêu cầu viết hộ tiếp, trợ lý hoàn thiện PUT /api/auth/me, sửa email tối đa254/rỗng sau Trim, trả role từ user, thêm Required cho FullName và GetProfileAsync nối GET /api/auth/me đọc DB. GET/PUT trả LoginUserResponse (id,email,fullName,role); ID lấy từ token. Không đổi schema hoặc migrate.
+- Cập nhật kiểm tra danh tính frontend và mock check-auth từ userId sang id cho hợp đồng GET mới; form ProfileEditor vẫn preview, chưa nối lưu hoặc cập nhật tên/email trong session.
+- Hai repository test đã bổ sung GetByIdAsync; 3/3 unit test auth pass ở lượt trước. Build mới sau API hồ sơ: toàn solution pass0 warning/0 error, React build pass. Chưa chạy test hồ sơ/HTTP/DB hoặc browser mới; chưa xác nhận lưu thật. Không commit.
+- Tiếp theo: kiểm chứng GET/PUT hồ sơ (giữ email của mình, email người khác409, validation400, user không tồn tại404), rồi nối form frontend.
+
+## Kết phiên 23/11/2026 — bàn giao FE và bước học hồ sơ
+
+- Đã đọc notes/code lưu trên đĩa, kiểm tra ProfileEditor và AuthController: hồ sơ chỉ preview tên/email, save disabled; backend chưa có API đọc/cập nhật hồ sơ từ DB. User xác nhận hỏi phần này ai làm: backend user tự viết theo cách học đã thống nhất; FE và nối API do trợ lý làm. Chưa có ủy quyền viết hộ backend hồ sơ, không tạo khung/TODO khi kết phiên.
+- Kiểm chứng MỚI23/11: npm --prefix web run build pass. dotnet build ShopFlow.slnx --no-restore trong sandbox báo thất bại không chẩn đoán; chạy lại ngoài sandbox thành công API/tests,0 warning/0 error. Không chạy backend tests/Playwright mới; kết quả21–22/11 giữ là bằng chứng lịch sử, không chứng minh DB/schema đã cập nhật hoặc E2E ghi thật.
+- Đã cập nhật learning-plan buổi24–26, giữ30 buổi/120 ID. PersonalProgress8091 đọc→ghi→đọc lại: thêm day-24-build/verify/review và day-25-build=true; giữ timestamp day-24-learn cũ và mọi mục khác. Verify/review buổi25 và buổi26 chưa tick vì thiếu E2E thật/tự giải thích và CRUD danh mục UI. Không rebuild tracker, không sửa mount/volume.
+- Phát hiện khi đối chiếu kế hoạch: AdminCategoriesController có backend nhưng chưa có frontend CRUD danh mục. Đã ghi lại trong README/plan, sửa nhận định trước đó rằng chỉ còn hồ sơ/ảnh/thẻ. Không triển khai thêm chức năng trong lượt kết phiên.
+- Phiên sau: đọc ghi chú mới nhất và code user đã lưu. Hướng dẫn một phần nghiệp vụ API hồ sơ (đọc/cập nhật tên,email dựa userId trong token); giải thích luồng trước, chưa đưa lời giải/khung trừ khi user yêu cầu. Chốt riêng địa chỉ/đổi mật khẩu/xóa tài khoản nếu mở rộng. Còn frontend CRUD danh mục, ảnh theo SKU/upload, thanh toán thẻ thật và kiểm chứng E2E tài khoản thật.
+- Không sửa code backend/DB, không migration/seed, không commit. Giữ toàn bộ thay đổi đang có. Build React mới đã tạo dist; không xác nhận server preview đang chạy trong lượt này. Tool update_running_summary không được cung cấp trong lượt kết phiên nên không cập nhật nhãn qua tool đó.
+
+
+## Cập nhật 22/11/2026 — biểu mẫu hồ sơ, chưa có API lưu
+
+- User yêu cầu tiếp tục phần FE còn thiếu. Đã đọc AuthController/User/AuthService: chỉ có đăng ký/login/me, chưa API cập nhật hồ sơ. Đã hỏi phạm vi sửa tên/email, địa chỉ hoặc mật khẩu/xóa tài khoản; user nói tiếp, chưa chọn cụ thể. Làm trước preview họ tên/email, không tự mở rộng backend hoặc nghiệp vụ xóa tài khoản.
+- Thêm ProfileEditor trong hồ sơ: mở dialog từ Chỉnh sửa thông tin, nhập tên/email, đóng/Escape, mở lại lấy thông tin session. Nêu rõ preview chưa lưu, nút Lưu disabled. Không fetch ghi, không sửa session/localStorage, không giả thông báo thành công. Đây chỉ là phần giao diện, CRUD hồ sơ chưa hoàn tất.
+- Build mới và check-auth mới pass với mock; thêm kiểm tra dialog, Escape, reset dữ liệu chưa lưu, save disabled, responsive1440/390/320. Chưa kiểm chứng lưu hồ sơ thật vì API chưa có. Không backend/DB/package/commit.
+- Bước cần chốt: API đọc/cập nhật hồ sơ và phạm vi email/địa chỉ; backend mặc định user tự viết theo AGENTS.md. Ảnh SKU và thanh toán thẻ vẫn chưa tích hợp.
+
+
+## Cập nhật 22/11/2026 — rà soát luồng FE và điều hướng
+
+- Menu avatar Admin dẫn tới quản lý đơn/sản phẩm thay vì giỏ; mục đơn trên header cửa hàng dẫn Admin vào quản lý đơn. Đăng nhập lại trực tiếp từ /account quay về hồ sơ; welcome có tiêu đề và thông báo mất phiên phù hợp. authRequest me bỏ phản hồi của phiên cũ sau fetch/đọc JSON.
+- Thêm NotFoundPage cho đường dẫn không tồn tại, giới hạn route detail một segment để URL dư không mở nhầm đơn/sản phẩm. Không đổi nghiệp vụ backend. Viết lại README theo trạng thái hiện tại, bỏ các mô tả lịch sử mâu thuẫn (giỏ/đơn/Admin chưa làm), ghi rõ thiếu API và kiểm chứng.
+- Build mới pass. check-auth cập nhật theo tách welcome/account và chạy mới pass hoàn toàn mock: login401,register201/409,503,me401,expiry,Back/reload quay đúng hồ sơ,menu Admin,next ngoài bị loại,404. Chạy lại check-cart,check-checkout,check-order,check-admin-orders,check-admin-products đều hoàn tất. Cart đọc sản phẩm thật và thiếu token401; mọi ghi trong test đều mock, không tạo user/đơn hoặc đổi kho thật. API sản phẩm qua preview trả200 mới trong lượt này. Không chạy backend suite hoặc home/catalog/product lại.
+- Trang404 mobile390 đã xem ảnh, không tràn ngang; các script kiểm tra responsive theo phạm vi của chúng. git diff --check sạch whitespace (cảnh báo CRLF). Không commit, không sửa backend. Preview4173 đang phục vụ build mới.
+- Chưa hoàn tất các phần cần backend: CRUD hồ sơ (cần chốt trường), ảnh/gallery/upload theo SKU, thanh toán thẻ thật. Frontend hiện có đủ các màn hình nghiệp vụ đã nối ở README, nhưng chưa khẳng định E2E thành công bằng Customer/Admin thật.
+
+
+## Cập nhật 22/11/2026 — React Admin sản phẩm
+
+- Thêm /admin/products, /admin/products/new, /admin/products/{id}. Danh sách phân trang10 dòng gồm SKU/tên/layout/giá/tồn/trạng thái; API Admin hiện chỉ hỗ trợ page/size nên không dựng bộ lọc giả. Link trong hồ sơ Admin và điều hướng giữa đơn/sản phẩm; login next hỗ trợ các route mới.
+- Form đầy đủ theo DTO: SKU, tên, thương hiệu, màu, CategoryId từ GET categories, switch, kết nối riêng lẻ, hot swap nullable, mô tả, giá nguyên VND, tồn mới tuyệt đối, IsActive. POST tạo; PUT gửi RowVersion đã đọc và dùng version mới sau lưu; DELETE ngừng bán có dialog rồi GET lại bản mới. Bật bán lại bằng IsActive và Lưu. Không upload ảnh vì API chưa hỗ trợ.
+- SKU_EXISTS cho sửa lại; PRODUCT_CONFIGURATION_LOCKED/CONCURRENCY_CONFLICT khóa lưu đến tải lại; lỗi mạng/kết quả chưa rõ yêu cầu kiểm tra danh sách, không tự retry ghi. 401 xóa phiên, Customer không gọi Admin API. Chưa tự khóa trước cấu hình đã bán vì DTO chưa có HasOrders; server quyết định và FE giải thích lỗi. Không sửa backend/DB/package, không commit.
+- Build React mới pass. check-admin-products.cjs hoàn tất không lỗi bằng network mock: list/paging, POST201, validation kết nối, SKU_EXISTS, PUT RowVersion và tồn tuyệt đối, DELETE204/xác nhận/hủy, bán lại, configuration locked/concurrency/network,401,Customer gate. Responsive biểu mẫu1440/768/390/320 không tràn trang, đã xem screenshot desktop/mobile. Không ghi sản phẩm/kho thật, chưa kiểm chứng bằng Admin thật; không chạy backend suite mới. git diff --check không lỗi (cảnh báo CRLF).
+- Preview4173 khởi động lại ngoài sandbox để Edge truy cập. Phần tiếp theo cần rà soát luồng frontend tổng thể và đối chiếu những API còn thiếu: CRUD hồ sơ, ảnh sản phẩm, thanh toán thẻ thật. Không coi toàn bộ frontend/backlog đã hoàn tất.
+
+
+## Cập nhật 21/11/2026 — React Admin quản lý đơn hàng
+
+- Tiếp tục FE: thêm /admin/orders và /admin/orders/{id}, danh sách10 đơn/trang, lọc trạng thái, chi tiết snapshot sản phẩm/tổng tiền/địa chỉ/ngày đặt. Tài khoản Admin có link Quản lý đơn hàng; login next hỗ trợ các route này. Customer bị chặn UI và không gửi request Admin; quyền thực tế vẫn do server quyết định.
+- Dùng GET admin/orders, GET admin/orders/{id}, PUT admin/orders/{id}/status với body status. Pending→Paid/Cancelled, Paid→Shipped/Cancelled; Shipped/Completed/Cancelled không hiện thao tác. Có dialog xác nhận, khóa gửi, lỗi ghi buộc tải lại;401 xóa phiên,403/404/409 thông báo. Xác nhận Paid không thu tiền qua thẻ; hủy không tự hoàn tiền. Không sửa backend/DB/package hoặc commit.
+- Build React mới pass. check-admin-orders.cjs chạy hoàn tất: lọc/phân trang/rỗng, detail, bỏ xác nhận không ghi, Paid/Shipped/Cancelled, body/Bearer,409/network khóa thao tác,404,401,Customer không gọi API, responsive320/390/768/1440 không tràn trang. Các request ghi dùng mock, không thao tác đơn thật. Đã xem screenshot desktop/mobile. Chưa kiểm chứng Admin bằng API/tài khoản thật và chưa chạy backend suite mới.
+- Bước tiếp theo sau duyệt: frontend Admin sản phẩm theo API hiện có. CRUD hồ sơ và thanh toán thẻ thật vẫn là phần còn thiếu, không coi đã hoàn tất.
+
+
+## Cập nhật 21/11/2026 — FE chi tiết đơn hàng Customer
+
+- Thêm /orders/{id}, nối mã đơn trong ProfileOrders, nút xem chi tiết sau checkout và Đơn của tôi trên header. Login next hỗ trợ đơn/account. Hiển thị items snapshot, tổng tiền, địa chỉ, ngày đặt và tiến trình theo trạng thái API; không suy diễn timestamp chuyển trạng thái.
+- GET /api/orders/{id}; POST /cancel chỉ Pending, /complete chỉ Shipped, Bearer và không gửi body. Có dialog xác nhận, khóa gửi lặp, hiển thị response server; lỗi ghi khóa thao tác đến khi tải lại chi tiết, không tự retry POST. 401 xóa phiên, 403/404 có thông báo, Admin không gọi API Customer. Chưa sửa backend/DB, không commit.
+- Build React mới thành công. web/check-order.cjs chạy hoàn tất không lỗi với API giả lập: cancel dialog, cancel/complete, body/Bearer,409/network khóa nút và tải lại,404,401,Admin, responsive320–1440. Đã xem ảnh desktop/mobile. Không ghi đơn thật; backend suite không chạy mới. git diff --check không lỗi whitespace (có cảnh báo CRLF).
+- Preview4173 đã khởi động lại; API8080 hiện connection refused. Chưa kiểm chứng đơn qua API thật. Thanh toán thẻ vẫn Sắp hỗ trợ, backend tích hợp nằm trong backlog trước đó; CRUD hồ sơ chưa có API.
+
+
+## Cập nhật 21/11/2026 — FE chọn thanh toán, backend thẻ thật làm sau
+
+- User yêu cầu checkout hỗ trợ thanh toán thẻ thật như cửa hàng thực tế, ghi backend làm sau và làm FE trước. Đã thêm chọn Thẻ tín dụng/ghi nợ (Sắp hỗ trợ) và Đặt hàng demo. Chọn thẻ hiển thị giải thích3 bước qua cổng, khóa CTA và guard submit; không nhập số thẻ/CVV, không gọi cổng hoặc tạo đơn khi chọn thẻ. Chọn demo giữ POST checkout hiện tại. Chưa chọn nhà cung cấp hay thương hiệu thẻ.
+- Spec bổ sung backlog thanh toán thật: merchant/provider/sandbox, phiên thanh toán từ số tiền server, transaction/idempotency, webhook xác minh và đối chiếu, Paid phía server, race hủy/thanh toán và giữ/hoàn kho, hoàn tiền/đối soát, kiểm thử trước live. Yêu cầu này thuộc mở rộng làm sau, không coi thanh toán thật đã xong. Không sửa backend/DB hoặc tích hợp SDK.
+- Build mới pass; check-checkout.cjs bổ sung kiểm tra chọn thẻ disabled/không POST, chuyển lại demo; toàn script PASS với network mock, không ghi DB/thu tiền. Responsive320–1440 và ảnh mobile đã kiểm tra; không phải kiểm chứng cổng thanh toán. Ghi chú trong web/README.md. Không commit/tick hoàn thành thanh toán thật.
+
+
+## Cập nhật 21/11/2026 — React checkout và kết quả đơn
+
+- Đã thông báo và triển khai `/checkout`, nối nút Tiến hành đặt hàng từ giỏ, chặn khi đang ghi/stale/unavailable. Login next hỗ trợ checkout. Trang tải giỏ mới, nhận ShippingAddress10–500 ký tự sau trim, hiển thị dòng/tạm tính/phí giao0; POST /api/orders chỉ shippingAddress và Bearer, không gửi userId/giá từ client. Thanh toán mô phỏng, không nhập thẻ hoặc thu tiền.
+-201 hiển thị mã/trạng thái/địa chỉ/items snapshot/tổng tiền từ response, dẫn về tài khoản xem đơn. Khóa submit khi đang gửi, giữ kết quả hoặc trạng thái chưa rõ theo đối tượng session trong WeakMap khi điều hướng nội bộ để không tự POST lại.409 yêu cầu kiểm tra/tải lại giỏ;401 xóa phiên;403/404,400 có thông báo; network/5xx/malformed success chặn gửi lại trong phiên và dẫn kiểm tra đơn. Chưa có idempotency key backend: khóa frontend không đảm bảo chống lặp giữa tab/reload; trường hợp chưa rõ hiện cần kiểm tra đơn rồi đăng nhập lại trước khi đặt lại. Không tự retry checkout.
+- Build React mới pass. check-checkout.cjs PASS bằng network mock, không tạo đơn/ghi DB: address trim/validation,body/Bearer,201 result,quay lại không POST lặp,409 thiếu kho,network chưa rõ/không retry,401,unavailable,giỏ rỗng,Admin; responsive1440/1024/768/390/320 không tràn ngang/pageerror. Đã xem ảnh desktop/mobile. check-cart chạy mới PASS (401 thiếu token thật, các ghi mock). Chưa checkout thành công qua UI bằng Customer thật; không chạy backend suite mới.
+- Không sửa backend/package/commit/tick tracker. API hiện đủ cho form địa chỉ đơn giản, chưa có sổ địa chỉ/người nhận/số điện thoại riêng hoặc quote/version giá để xác nhận giá cố định; tổng tiền server quyết định tại checkout. Theo dõi các thiếu sót này, không tự mở rộng schema. Bước tiếp theo sau duyệt: trang chi tiết đơn từ hồ sơ và thao tác hủy/đã nhận hàng. CRUD hồ sơ vẫn chưa chốt phạm vi/API.
+
+
+## Cập nhật 21/11/2026 — tổng hợp đơn trong hồ sơ
+
+- Theo yêu cầu trang cá nhân bớt trống, mở rộng /account thành hai cột: thông tin cá nhân trái, ProfileOrders bên phải cho Customer. Có tổng tất cả/Pending/Paid/Shipped/Completed/Cancelled, nhấn trạng thái để lọc, danh sách5 đơn/trang (mã/ngày/trạng thái/tổng tiền), nút trước/tiếp/làm mới, loading/error/retry/empty. Không tạo số liệu giả khi API lỗi, không gọi đơn Customer cho Admin.
+- Gọi GET /api/orders/me theo Bearer; số đếm dùng totalCount của truy vấn từng trạng thái size1, không đếm5 dòng hiện tại. API hiện chưa có endpoint tổng hợp nên dùng6 truy vấn đếm và1 truy vấn danh sách; có thể chênh tạm thời nếu đơn đổi trạng thái giữa các request, nút làm mới tải lại tất cả.401 xóa phiên, bỏ phản hồi phiên cũ. Không sửa backend/DB, không thêm chức năng checkout hay thao tác đơn.
+- Build React mới pass. Browser với network mock12 đơn: số đếm,5 dòng/trang, trang2,lọc Completed,503/thử lại pass; không tràn ngang1440/1024/768/390/320, đã xem screenshot desktop. Chưa xác minh bằng dữ liệu đơn tài khoản thật ở UI. Console HTTP503 là lỗi cố ý trong kiểm thử, không khẳng định backend test mới. CRUD thông tin cá nhân vẫn chờ chốt phạm vi/API như mục trước.
+
+
+## Cập nhật 21/11/2026 — sửa hiểu nhầm poster và hồ sơ
+
+- User làm rõ poster chỉ là chào mừng khi đăng nhập; biểu tượng người ở header phải mở hồ sơ, có nhu cầu thêm/sửa/xóa thông tin. Đã tách `/welcome` (đích mặc định sau login) và `/account` (hồ sơ tên/email/role, đăng xuất). Giữ next giỏ/sản phẩm khi login từ luồng đó. Icon header hiện dẫn đúng /account, không hiện poster. Avatar trên welcome có link Thông tin cá nhân.
+- Build mới pass; browser kiểm chứng bằng login/me mock: login→welcome→catalog→icon header→account, không poster trong hồ sơ; không tràn ngang1440/768/390/320. Chưa chạy lại toàn bộ check-auth vì kỳ vọng poster ở account của script cũ cần cập nhật theo tách route.
+- Đã hỏi user phạm vi thêm/sửa/xóa: họ tên/email, sổ địa chỉ, đổi mật khẩu hay xóa tài khoản. Đang chờ làm rõ; chưa tự chọn nghiệp vụ xóa tài khoản. Backend hiện không có API cập nhật hồ sơ/địa chỉ/đổi mật khẩu/xóa tài khoản; chưa sửa backend hoặc tạo nút lưu giả. Phần CRUD hồ sơ còn chưa hoàn thành, cần chốt trường và triển khai API phù hợp theo quy tắc học backend.
+
+
+## Cập nhật 21/11/2026 — đổi màn hình sau đăng nhập theo phản hồi
+
+- User gửi ảnh /account và yêu cầu bỏ bố cục thông tin tài khoản lớn, thay poster giữa trang, dòng Hello username và nút khám phá. Đã đổi riêng trạng thái đăng nhập của /account: lời chào dùng FullName, poster ảnh có sẵn và CTA sang catalog; avatar góc phải mở tên/email/role, giỏ hàng và đăng xuất. Có đóng ngoài/Escape/trả focus. Không sửa backend hoặc chức năng đăng ký/đăng nhập.
+- Build React mới pass; check-auth cập nhật theo poster/avatar chạy PASS (thành công giả lập,401 sai thông tin dùng API thật). Kiểm tra riêng poster ở1440/1024/768/390/320 không tràn ngang, avatar/Escape hoạt động; đã xem ảnh desktop/mobile. Không ghi DB/commit. Ảnh user là bằng chứng giao diện tài khoản đã hiển thị với tài khoản của họ, không suy diễn thành kiểm chứng toàn bộ auth/cart.
+- Sau tải lại để lấy bản mới cần đăng nhập lại vì token chỉ bộ nhớ. Chờ người dùng xem; checkout vẫn chưa triển khai.
+
+
+## Cập nhật 21/11/2026 — React giỏ hàng
+
+- Đã thông báo và triển khai riêng `/cart`, AddToCart trên trang chi tiết và link giỏ ở Header. GET/POST `/api/cart/items`, PUT/DELETE `/api/cart/items/{productId}` gửi Bearer từ bộ nhớ; không nhận UserId từ frontend. Theo controller thực tế DELETE trả200 CartResponse, có fallback204→GET. Không sửa backend/thêm package/commit.
+- Giỏ hiển thị ảnh minh họa theo SKU, tên/giá/tồn/lineTotal/totalAmount theo response, số lượng1–99, cập nhật bằng nút, xóa có dialog xác nhận/hủy. Chặn thao tác lặp khi đang gửi; lỗi ghi đánh dấu dữ liệu cần tải lại trước khi sửa tiếp, không tự retry ghi hoặc optimistic update. IsAvailable=false dùng thông báo chung thiếu tồn/ngừng bán vì DTO không có IsActive. Giỏ chưa giữ giá/hàng. Nút đặt hàng chưa nối, giải thích rõ.
+- Khách chưa đăng nhập có link login với next=/cart hoặc /products/id; next chỉ nhận hai dạng đường dẫn nội bộ này, đăng nhập xong quay lại (không tự thêm lại). Admin bị chặn trên UI, server vẫn quyết định quyền.401 xóa phiên; phản hồi từ phiên cũ bỏ qua. Token vẫn chỉ bộ nhớ. Đăng ký/login giữ next khi chuyển giữa hai form.
+- Kiểm chứng mới: build React pass; check-cart.cjs PASS. API thật GET cart thiếu token401; các ca ghi giỏ dùng network mock, không sửa DB: login quay lại cart, add quantity/Bearer, PUT,409 tải lại, sản phẩm unavailable, xóa xác nhận/hủy, giỏ rỗng,503 retry,401 logout,Admin gate. Không pageerror/tràn ngang tại1440/1024/768/390/320; đã xem screenshot desktop/mobile. check-auth và check-product chạy mới PASS. Chưa xác minh thao tác giỏ bằng tài khoản thật trên UI, chưa chạy backend suite mới.
+- Đã ghi web/README.md. Tiếp theo người dùng xem `/cart`, đăng nhập Customer và thử thêm từ chi tiết (không gửi mật khẩu/token). Sau duyệt mới làm checkout/đặt hàng React; không tự triển khai đơn/Admin trong lượt này. Vẫn còn backend validation mật khẩu đã ghi ở mục trước.
+
+## Cập nhật 21/11/2026 — React xác thực và tài khoản
+
+- Theo yêu cầu tiếp tục, đã thông báo và làm `/login`, `/register`, `/account` cùng AuthPage/auth.css, nối POST login/register và GET me. Form có hiện/ẩn mật khẩu, autocomplete, trạng thái gửi/chặn submit lặp, lỗi401/400/409/5xx, xác nhận mật khẩu và validation frontend. Đăng ký thành công chuyển đăng nhập vì RegisterResponse thực tế chỉ email/fullName, chưa trả token. Account chỉ xem thông tin login sau xác minh me; logout, hết hạn theo expiresAt và me401 xóa phiên.
+- Giữ token trong bộ nhớ theo spec, không ghi localStorage/sessionStorage/cookie; reload cần đăng nhập lại. Thêm điều hướng History API và bắt link nội bộ để chuyển trang không mất phiên; hỗ trợ Back/Forward, vẫn giữ mở tab mới/modifier, link hash. Header Tài khoản dẫn login/account. Không thêm package hoặc sửa backend.
+- Phát hiện qua code đã lưu: RegisterRequest.Password chỉ Required, AuthService.RegisterAsync chưa kiểm tra độ dài8–128; khác spec và bằng chứng lịch sử. Frontend đã kiểm tra nhưng không thay validation server. Cần người dùng bổ sung backend trong bước học tiếp theo; chưa kiểm thử HTTP mật khẩu ngắn mới và chưa sửa hộ. Spec bảng endpoint nói register trả token nhưng code/notes trước đó trả email/fullName; frontend theo code thực tế.
+- Build mới npm --prefix web run build pass. check-auth.cjs PASS: API thật đăng nhập sai401; ca thành công login/me, register201/409,503,me401,hết hạn,logout,giữ phiên khi đi catalog→chi tiết→account/Back, reload mất phiên được giả lập ở network. Không tạo user hoặc ghi DB; chưa kiểm chứng đăng ký/đăng nhập thành công với tài khoản thật trên UI. Không log token/mật khẩu thật. Responsive1440/1024/768/390/320 không tràn ngang/pageerror; đã xem ảnh desktop/mobile. check-home/check-catalog/check-product chạy mới PASS sau đổi SPA. Không chạy backend suite, không commit/tick tracker.
+- Chờ người dùng xem http://127.0.0.1:4173/login và /register, thử tài khoản của mình (không gửi mật khẩu/token). Tiếp theo sau duyệt là giỏ hàng React; chưa tự triển khai cart/order/Admin. Backend refresh token/quên mật khẩu chưa có và ngoài phạm vi MVP theo spec.
+
+## Cập nhật 21/11/2026 — React trang 3: chi tiết sản phẩm
+
+- Đã tiếp tục theo bàn giao và thông báo trước khi code riêng trang chi tiết `/products/{id}`. ProductPage gọi GET chi tiết thật; giá/tồn/thông số/mô tả theo API, sản phẩm cùng layout lọc CategoryId và loại SKU đang xem. Có loading, 404/ID sai, lỗi/thử lại, mô tả rỗng và hot swap chưa có thông tin. Thẻ chung trên homepage/menu/catalog chuyển thành liên kết chi tiết, hỗ trợ mở tab mới và Back.
+- Gallery theo mẫu đã duyệt: 4 ảnh minh họa xếp lớp, thumbnail, prev/next, lightbox, Escape/focus, phím trái/phải; chuyển động transform/opacity ngắn và giảm chuyển động. Có xử lý swipe nhưng chưa kiểm trên thiết bị vật lý. Ảnh dùng chung từ prototype, không khẳng định đúng SKU; backend vẫn thiếu ảnh/gallery/upload. Nút thêm giỏ disabled, có giải thích chưa nối chức năng; chưa triển khai auth/cart/order/Admin React.
+- Kiểm chứng mới: npm --prefix web run build thành công. Playwright Edge ngoài sandbox: check-product PASS dữ liệu tên/SKU/giá theo API, điều hướng catalog→chi tiết, gallery, keyboard, lightbox/Escape/trả focus, reduced-motion, ảnh tải được, reload, ID thiếu/sai404, giả lập503/thử lại, giả lập hết hàng/null/mô tả rỗng. Không pageerror/tràn ngang ở2560/1440/1024/768/390/320. Đã xem screenshot desktop/mobile. check-home và check-catalog cập nhật theo điều hướng mới và chạy PASS. Không coi toàn bộ taste gate đã pass; giữ bố cục/brand/gallery người dùng đã duyệt.
+- Preview React4173 và API8080 đều trả200. Sandbox chặn socket/browser, kiểm tra lại ngoài sandbox thành công; không đổi môi trường hoặc dữ liệu. Không sửa backend, không chạy lại backend suite, không commit hoặc tick frontend hoàn tất. Đã cập nhật web/README.md.
+- Tiếp theo: người dùng xem http://127.0.0.1:4173/products/1 và phản hồi; giữ yêu cầu làm từng trang, nói trước trang tiếp theo. Sau duyệt chi tiết mới nối giao diện tài khoản/đăng nhập để chuẩn bị giỏ hàng. Chưa tự làm thêm trang trong lượt này.
+
+## Kết phiên 21/11/2026 — React homepage/catalog, ưu tiên hơn lịch sử bên dưới
+
+- Đã đọc code đã lưu, notes, trạng thái Git và cập nhật kế hoạch. Build cuối phiên mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công API/tests, 0 warning/0 error; lần trong sandbox báo thất bại không có chẩn đoán. npm --prefix web run build thành công. Không sửa backend, không commit.
+- Frontend thật đã có homepage `/` và danh sách `/catalog`, dùng API8080 qua proxy. Trang chủ được chỉnh gọn theo phản hồi, có dải AllProducts; ảnh ProductCard theo yêu cầu người dùng dùng ảnh minh họa, mapping tạm theo SKU. Danh sách có lọc/sort/page/query string và QuickInfo. Không coi QuickInfo là trang chi tiết đã xong; người dùng chưa xác nhận duyệt riêng bản catalog cuối.
+- Bằng chứng trong phiên: check-catalog PASS và check-home PASS đã ghi dưới; không chạy lại browser tests/backend tests khi kết phiên. Toàn suite87/87 ngày20/11 là lịch sử. Build không thay cho kiểm thử nghiệp vụ hoặc schema DB.
+- Đã cập nhật buổi24 trong docs/learning-plan.json, giữ30 buổi/120 ID. PersonalProgress8091 đã đọc/ghi/đọc lại: day-23-build/verify/review=true theo bằng chứng test20/11; day-24-learn=true cho chuẩn bị thiết kế/cách chạy FE/API đã giải thích. day-23-learn vẫn false (không coi test trợ lý viết là user đã học hết); day-24-build/verify/review vẫn false vì thiếu chi tiết/gallery và kiểm chứng. Không thay xác nhận/timestamp ngoài4 mục mới; không rebuild tracker.
+- Phiên sau: đọc trạng thái này và code; tiếp tục theo yêu cầu làm từng trang, nói trước trang sẽ code. Bước kế tiếp là trang chi tiết sản phẩm React, lấy GET /api/products/{id}, gallery theo prototype đã duyệt; kiểm tra catalog/ảnh theo phản hồi nếu có trước khi chuyển. Không giao lại homepage/catalog đã xong hoặc test mua hàng. Auth/cart/order/Admin React chưa triển khai, không tự làm cả loạt.
+- Backend thiếu đã ghi web/README.md: Product image/gallery/upload, banner/featured/ảnh Category. Catalog API hiện đủ cho bộ lọc đang dùng. Ảnh hiện là tham khảo, chưa xác nhận đúng SKU. Không tự thêm backend ảnh khi chưa thống nhất bước học.
+- Môi trường cuối phiên: preview React http://127.0.0.1:4173, API8080 và DB Docker đã bật lại; frontend chưa đóng gói Docker/wwwroot. Nếu preview dừng: tại web chạy npm run build rồi npm run preview; nếu4173 đã dùng thì mở URL, không chạy trùng. Vite dev5173 vẫn lỗi đường dẫn C#, không tự đổi tên/di chuyển repo. Prototype4175 là bản mẫu cũ, không nhầm với React4173.
+
+## Cập nhật 21/11/2026 — React trang 2: danh sách sản phẩm và ảnh
+
+- Theo yêu cầu thêm ảnh và làm từng trang, đã triển khai `/catalog` (CatalogPage): tìm tên/SKU, layout theo ID thật, switch, kết nối, khoảng giá, sort newest/priceAsc/priceDesc/nameAsc, page/size, loading/error/retry/empty. Query string lưu bộ lọc, tải lại giữ lựa chọn. Menu/tìm kiếm/layout trang chủ dẫn sang catalog; dải AllProducts có Xem tất cả. Chưa triển khai trang chi tiết riêng; bấm thẻ mở QuickInfo.
+- Thêm ảnh tham khảo đã có trong prototype vào ProductCard dùng chung homepage/menu/catalog. Mapping tạm theo SKU trong web/src/lib/productImages.js; nhãn/alt ghi ảnh minh họa, chưa phải ảnh SKU thật. Không ghi ảnh vào DB. Backend còn thiếu Product image/gallery/upload; catalog hiện đã có đủ API lọc/sort/page, không sửa backend. Banner/featured/ảnh Category vẫn là backlog đã nêu.
+- Build mới npm run build ngày21/11 thành công. Đã mở lại Docker Desktop và compose up -d --no-build db api do môi trường đã dừng; giữ dữ liệu, không migrate/seed. Preview đang chạy4173, API8080.
+- Kiểm chứng mới check-catalog.cjs PASS: đối chiếu sort với API, phân trang thật size2/page2 trên3 sản phẩm, reload giữ sort, validation khoảng giá, lọc Bluetooth, kết quả rỗng/xóa lọc, dialog, giả lập503 rồi thử lại, ảnh tải được và tìm kiếm homepage chuyển catalog. Không pageerror/không tràn ngang ở2560/1440/1024/768/390/320. Đã xem ảnh desktop/mobile. Lần test đầu sai locator nhãn select; lần sau chờ decode ảnh lazy trong menu ẩn, đã sửa bài kiểm tra, không sửa production để vượt test.
+- Không test backend suite mới, không commit hoặc tick toàn bộ frontend. Chờ người dùng xem http://127.0.0.1:4173/catalog trước khi làm trang tiếp theo. Tài khoản/giỏ/đơn/trang chi tiết vẫn chưa triển khai React.
+
+## Cập nhật 21/11/2026 — thu gọn homepage và thêm dải sản phẩm
+
+- Theo ảnh phản hồi, thu nhỏ khối layout, đặt tiêu đề cạnh nhóm layout trên desktop, giảm khoảng cách và mở rộng vùng nội dung theo header. Thêm AllProducts dưới khối giới thiệu: GET products page/size10/sort=newest riêng, dải cuộn ngang/nút trái-phải, phân trang khi trên10 sản phẩm, loading/error/retry/empty. ProductCard thêm kết nối/hot swap từ API; không thêm rating/sale giả. DB hiện3 sản phẩm, không nhân bản cho đầy hàng.
+- Build React mới thành công. Giữ ảnh sản phẩm là sơ đồ có nhãn vì backend chưa có ảnh; chưa thêm backend hoặc đổi dữ liệu. Vẫn chỉ sửa trang chủ, preview4173 dùng dist mới sau tải lại.
+
+## Cập nhật 21/11/2026 — React trang 1: trang chủ
+
+- Người dùng duyệt navbar/bo góc và yêu cầu code từng trang, nói trước trang sẽ làm, ghi backend thiếu, chạy cho xem rồi mới tiếp tục. Đã thông báo và triển khai riêng trang chủ React tại web/: Header/mega menu, HomePage, ProductCard, sơ đồ KeyboardDrawing, API helper, CSS và Vite. Chưa làm trang catalog/chi tiết/auth/cart/order riêng; sản phẩm mở thông tin nhanh, các nút trang chưa làm báo rõ trong dialog. Không sửa backend, không commit.
+- Dependency mới đã giải thích trước khi cài: react/react-dom, vite/@vitejs/plugin-react, khóa phiên bản package-lock. GET categories và products thật qua proxy /api → localhost8080; products dùng page/size=3/sort=newest, q/categoryId/switchType/connectivity khi lọc. Lấy category ID từ response, không hardcode ID prototype. Có loading/empty/error/retry và phân trang; không dùng mock fallback hoặc ghi/seed DB.
+- Backend thiếu liên quan homepage: ảnh/gallery Product và upload; quản lý banner/nội dung homepage; featured/thứ tự featured; ảnh/mô tả Category. Đã ghi web/README.md. Hiển thị sản phẩm mới nhất thay featured; sơ đồ chung ghi chưa có ảnh, không gán ảnh Keychron cho SKU. Banner/góc bàn giữ ảnh tham khảo đã duyệt, cần tài sản được phép dùng trước phát hành.
+- Build mới npm run build thành công. Playwright check-home.cjs pass API/name match, tìm kiếm rỗng/xóa lọc, thông tin nhanh, menu/Escape/mobile, giả lập HTTP503/thử lại phục hồi; không pageerror và không tràn ngang ở1920/1440/1024/768/390/320. Không kiểm thử backend mới, không chứng minh phân trang nhiều trang vì DB hiện3 sản phẩm. Đã chụp/xem desktop và menu mobile; không gọi toàn bộ taste gate đã pass.
+- Bản React chạy http://127.0.0.1:4173 qua npm run preview, API hiện8080; khác prototype4175. Vite dev5173 lỗi module với đường dẫn C#; cấu hình optimizeDeps chỉ khắc phục scanner, chưa khắc phục dev. Đã dừng dev lỗi; build/preview hoạt động, hướng dẫn trong web/README.md. Chưa tích hợp Docker/wwwroot. Chờ người dùng xem trang chủ trước khi thông báo/làm trang tiếp theo; không tick hoàn thành frontend.
+
+## Cập nhật 21/11/2026 — chỉnh navbar theo ảnh và bo góc
+
+- Người dùng đã duyệt phần chi tiết sản phẩm; yêu cầu navbar giống ảnh menu Keychron hơn và phối hợp khung bo tròn mềm mại. Đã sửa prototype ngoài repo: menu Tất cả sản phẩm/Bàn phím mở danh mục layout bên trái, thẻ sản phẩm bên phải, liên kết lọc kết nối, ô tìm kiếm rộng. Bo góc thẻ, ô nhập, ảnh; nút/nhãn dạng pill, nút biểu tượng tròn; giữ bố cục/gallery chi tiết đã duyệt.
+- Kiểm chứng mới bằng Playwright Edge: storefront pass 1920/1440/1024/768/390, menu/filter/search/gallery/lightbox/keyboard/reduced-motion, không tràn ngang; check-screens chạy thành công 18 route và luồng dữ liệu giả. Đã xem ảnh menu sau khi hiệu ứng kết thúc. Taste gate OFF (chưa có build active), không tuyên bố gate pass. Chưa nối API/React hoặc kiểm thử backend mới.
+- Bản sửa navbar chờ người dùng xem tại http://127.0.0.1:4175/screens.html#home. Không sửa backend, không commit, không tick frontend hoàn tất.
+
+## Kết phiên 21/11/2026 — ưu tiên hơn các mục bên dưới
+
+- Đã đọc notes mới nhất, code/diff đã lưu và trạng thái Git. Build mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công 0 warning/0 error, gồm API và tests. Lần trong sandbox dừng không có chẩn đoán; kết quả ngoài sandbox là bằng chứng build cuối phiên. Không sửa backend, không commit.
+- Không chạy lại test backend trong lượt kết phiên. Kết quả87/87 ngày20/11 là bằng chứng lịch sử, không phải lần chạy mới. Các kiểm tra Playwright prototype ngày21/11 đã ghi ở mục dưới vẫn giữ nguyên phạm vi; không suy diễn thành tích hợp API hoặc xác nhận người dùng đã duyệt bản mới.
+- Giao diện mới đang chờ người dùng duyệt: homepage http://127.0.0.1:4175/screens.html#home và gallery http://127.0.0.1:4175/screens.html#product/1. File nằm ngoài repo tại C:\Users\Hi\.codex\visualizations\2026\11\20\01a1f919-454b-7de3-831d-63aa0f1e3399\shopflow-preview. Nếu server dừng, chạy node server.cjs tại thư mục này. REFERENCE.md ghi nguồn ảnh/phạm vi/kiểm chứng. Chưa có React production hoặc gọi API thật.
+- Đã cập nhật buổi24 trong learning-plan để ghi nhận giai đoạn prototype và việc còn lại, giữ30 buổi/120 ID. Không tick hoàn thành React. Phần đọc PersonalProgress localhost8091 bị automatic approval review từ chối thực thi do hết usage limit, không phải kết luận thao tác không an toàn; chưa đọc hoặc thay đổi xác nhận/timestamp trên web. Khi công cụ hoạt động lại, đối chiếu trạng thái và tick riêng các mục buổi23 đủ bằng chứng (build/verify/review), giữ timestamp đã xong; không mặc định người dùng đã học hết test chỉ vì trợ lý viết hộ.
+- Phiên sau: cho người dùng duyệt homepage/navbar/gallery mới, sửa theo phản hồi. Sau khi chốt mới triển khai React và nối catalog API thật theo buổi24. Không giao lại phần test mua hàng đã hoàn thành. Git còn các thay đổi backend/test từ các phiên trước và thư mục .playwright-cli chứa bằng chứng trình duyệt; không tự xóa hoặc commit.
+
+## Cập nhật 21/11/2026 — homepage và gallery theo tham chiếu Keychron
+
+- Người dùng yêu cầu kết hợp navbar/mega menu và banner homepage của Keychron với gallery ảnh chuyển động xếp lớp, mô tả dưới sản phẩm như ảnh GearVN. Đã khảo sát trực tiếp keychron.com bằng Playwright desktop/mobile, mở hover menu, đọc nguồn ảnh. Bộ trong hình4 là JCodesMore/ai-website-cloner-template; skill clone-website tương ứng đã có trên máy và đã đối chiếu nguồn GitHub, không cài trùng. Dùng clone-website và design-motion-principles; giữ logo/font/tông trắng-đen-cam đã duyệt.
+- Đã thêm home-section.js/css, storefront.js/css và tích hợp vào prototype cũ ngoài repo. Homepage: http://127.0.0.1:4175/screens.html#home ; chi tiết: http://127.0.0.1:4175/screens.html#product/1 . Banner rộng, menu desktop hover/click/mobile, tìm kiếm/lọc thực trong dữ liệu giả, sơ đồ SVG4 layout, sản phẩm nổi bật; gallery4 ảnh tham khảo xếp lớp, thumbnail, prev/next, lightbox, phím mũi tên, xử lý swipe; mô tả, thông số, sản phẩm liên quan. Ảnh Keychron được ghi là tham khảo, không phải ảnh/giá SKU thật. Đây là phối hợp thiết kế theo yêu cầu, không clone pixel-identical toàn Keychron.
+- Kiểm chứng mới: node --check pass; check-storefront.cjs pass5 chiều rộng1920/1440/1024/768/390, menu desktop/mobile, filter/search, gallery/lightbox/keyboard, reduced-motion, ảnh và không tràn ngang. check-screens.cjs pass lại18 route và các luồng giỏ→checkout→hủy, danh mục, khóa cấu hình/lưu giá, login giả và state. Đã sửa cuộn khi đổi route thành instant. Chưa kiểm swipe trên thiết bị vật lý. Chi tiết nguồn ảnh, phạm vi, file, kiểm chứng ở REFERENCE.md trong thư mục prototype.
+- Vẫn chờ người dùng duyệt bản mẫu mới; chưa nối API/viết React production, không sửa backend, không commit hoặc tick hoàn thành frontend. Server prototype khởi động lại ở cổng4175. Không coi kiểm tra UI giả là kiểm thử tích hợp backend.
+
+## Cập nhật 20/11/2026 — bản mẫu giao diện để duyệt
+
+- Người dùng chốt nền trắng ấm/đen, ánh cam đào #F5AB7A, chữ Be Vietnam Pro và logo SHOPFLOW viết hoa kèm biểu tượng SVG. Đã dùng taste-skill, ui-ux-pro-max, design-motion-principles và Playwright cho bản mẫu; chưa triển khai React hoặc nối API thật.
+- Bản mẫu tại C:\Users\Hi\.codex\visualizations\2026\11\20\01a1f919-454b-7de3-831d-63aa0f1e3399\shopflow-preview; server.cjs chạy cổng4175. Trang chủ đã duyệt: http://127.0.0.1:4175/?theme=mono. Bộ màn hình mới: http://127.0.0.1:4175/screens.html#map.
+- Có 17 màn hình nghiệp vụ Customer/Admin và 1 bản đồ màn hình/API: catalog, chi tiết sản phẩm, đăng ký/đăng nhập/tài khoản, giỏ/đặt hàng/thành công, danh sách/chi tiết đơn Customer, danh sách/chi tiết/thêm/sửa sản phẩm Admin, danh mục và danh sách/chi tiết đơn Admin. Các thao tác chỉ dùng dữ liệu giả trong bộ nhớ; ảnh minh họa, không phải ảnh SKU thật. Có bộ chọn trạng thái lỗi/rỗng/loading/hết phiên/phân quyền/không tìm thấy/xung đột.
+- Kiểm chứng mới bằng Playwright Edge: check-screens.cjs chạy thành công với18 màn hình ở1440/768/390px, không tràn ngang tài liệu/không pageerror; luồng xóa giỏ→checkout→hủy, xác nhận đổi tên/chặn xóa danh mục có sản phẩm, khóa SKU và lưu giá, đăng nhập giả, bộ chọn trạng thái. Đã sửa script kiểm tra để reset dữ liệu mỗi lần và chờ điều hướng/đúng bộ chọn; không phải sửa production để vượt test. Đây là kiểm tra prototype, không chứng minh tích hợp API/backend.
+- Đang chờ người dùng duyệt bộ màn hình trước khi triển khai frontend thật. Không sửa backend, không tick hoàn thành React, không commit. Các cập nhật test phía dưới giữ nguyên bằng chứng lịch sử.
+
+## Cập nhật 20/11/2026 — hoàn thiện đợt test mua hàng theo yêu cầu
+
+- Người dùng giao trợ lý làm các phần test. Đã thêm PurchaseTestData.cs (fixture dữ liệu GUID, dọn dữ liệu riêng, cổng trước SQL ghi, fault injection sau SaveChanges trước commit), PurchaseConcurrencyTests.cs, PurchaseRulesTests.cs, PurchaseQueryTests.cs và PurchaseHttpTests.cs. Không thêm package, không sửa logic production, không commit.
+- Thêm 68 case: 7 concurrency/rollback, 37 quy tắc nghiệp vụ, 3 query/giỏ và 21 HTTP. Bao phủ hủy/Paid; 10 khách tranh chiếc cuối; hai checkout cùng giỏ; sửa giỏ/checkout; sửa cấu hình/checkout; rollback checkout/cancel sau SQL lưu nhưng trước commit; tổng nhiều dòng/snapshot; thiếu kho/inactive không đổi dữ liệu; ownership; chuyển trạng thái hợp lệ/sai; hủy/complete lặp giữ timestamp; hoàn kho vượt 1.000.000; RowVersion Admin cũ; khóa 7 trường cấu hình kể cả đơn Cancelled; quantity sai; giỏ rỗng/địa chỉ sai; filter/count/page/sort và luồng thêm/gộp/sửa/xóa giỏ.
+- Test HTTP khởi động API thật bằng process riêng ở cổng loopback ngẫu nhiên, DB shopflow_test:5434, JWT key ngẫu nhiên chỉ ở bộ nhớ/environment của process test; dừng process khi xong. Kiểm chứng 201/Location/GET lại, 400/401/403/404/409, token thiếu/sai/hết hạn, role Admin/Customer, ownership, vòng đời qua HTTP. Token hợp lệ được tạo bằng JwtTokenService; đây không phải bài đăng nhập qua HTTP. Các test race gọi service thật với cổng đồng bộ, không phải 10 HTTP request đồng thời.
+- Lần chạy nhóm đầu: 44/44 pass; nhóm HTTP: 21/21 pass. Full suite lần đầu 85 pass/2 fail: test tìm SKU tự giả định bỏ phân biệt hoa/thường (đã sửa test theo notes/spec Contains), bài 10 khách timeout khi các nhóm DB chạy song song. Test register tạo/gỡ trigger trên Carts có thể khóa test khác; đã thêm PostgreSqlCollection và gắn các lớp integration vào cùng collection. Các nhóm DB chạy tuần tự, concurrency bên trong mỗi test giữ nguyên; không sửa backend để vượt test.
+- Lần chạy cuối mới: dotnet test tests/ShopFlow.Tests/ShopFlow.Tests.csproj --no-restore ngoài sandbox, toàn bộ 87/87 pass, 0 fail/skip, khoảng13 giây; biên dịch API/test thành công. Đợt test mua hàng đã hoàn thành phạm vi trên. Không coi là đã hoàn thành toàn bộ IT01–IT20/MVP: chưa test HTTP register/login đầy đủ, race danh mục/thêm-chuyển Product, toàn bộ biên catalog hoặc chatbot chưa triển khai. Không suy diễn một lần race pass thành mọi thứ tự xen kẽ đã được kiểm chứng.
+- Cập nhật nội dung buổi23 theo bằng chứng; chưa tự tick web trong lượt này vì không phải kết phiên. Tiếp theo theo kế hoạch buổi24 là React: khung và catalog, frontend do trợ lý viết. Xử lý lỗi thống nhất/rate limit/log an toàn vẫn là các phần backend còn thiếu, không coi đã xong qua đợt test. Không giao lại người dùng tự viết các test mua hàng đã hoàn thành. Nếu người dùng hỏi giải thích, tập trung vào Arrange/Act/Assert, cổng đồng bộ và rollback của test đã có.
+
+## Cập nhật 20/11/2026 — test hai lượt hủy cùng đơn
+
+- Theo yêu cầu viết hộ, trợ lý thêm CancelOrderIntegrationTests.cs; không sửa logic production. Setup dữ liệu riêng bằng GUID: một Customer/giỏ rỗng Revision1, đơn Pending mua2 và Product còn8 (giả lập sau checkout).
+- Hai DbContext/service gọi CancelForUserAsync cùng orderId/userId. Wrapper chờ sau GetOrderForUpdateAsync; Assert cả hai đọc Pending/cùng RowVersion Order và Product/tồn8, đều thử lưu, đúng một thành công và một OrderConcurrencyException. Context mới xác nhận đơn Cancelled/có CancelledAt, kho10, quantity/tổng tiền và giỏ/Revision giữ nguyên. Finally dọn dữ liệu riêng của test.
+- Lần chạy trong sandbox biên dịch được nhưng test runner bị timeout kết nối testhost (Test Run Aborted), không phải lỗi assertion. Docker ban đầu tắt; người dùng mở Docker, trợ lý bật riêng db-test. Lần chạy mới ngoài sandbox: dotnet test tests/ShopFlow.Tests/ShopFlow.Tests.csproj --no-restore --filter FullyQualifiedName~CancelOrderIntegrationTests thành công 1/1 trên PostgreSQL test localhost:5434, có biên dịch API/test thành công.
+- Đây là hai lời gọi service thật, không phải HTTP; không chạy lại toàn bộ suite hoặc kiểm chứng race hủy/Paid, checkout/đổi cấu hình, rollback cưỡng bức. Test này chứng minh kết quả của tình huống đã dựng, không thay thế cơ chế bảo vệ production. Đã giải thích vai trò test so với RowVersion/transaction và hủy lặp tuần tự. Không commit, chưa tick trọn buổi23. Tiếp theo giải thích test vừa viết nếu cần, rồi chốt bài kiểm chứng tiếp theo.
+
+## Kết phiên 18/11/2026 — ưu tiên hơn các mục bên dưới
+
+- Đã đọc code đã lưu/diff và exception mới; build cuối phiên mới: dotnet build ShopFlow.slnx --no-restore ngoài sandbox thành công 0 warning/0 error. Không sửa backend hoặc commit khi kết phiên. Không chạy test tự động/HTTP/truy vấn database mới trong lượt này.
+- GET danh sách Admin đã dùng BuildAdminOrdersQuery chung cho count/page, AsNoTracking, status nullable chỉ lọc khi có giá trị, lọc trước sắp xếp/phân trang. Service validate page/size/enum/offset; controller chỉ Admin. Người dùng xác nhận chạy được sau sửa query null; chưa có xác nhận riêng đầy đủ phân trang/lọc/query sai/phân quyền.
+- GET chi tiết Admin đã có repository/service/controller và wrapper test do trợ lý viết theo yêu cầu. Ảnh GET /api/admin/orders/1 trả200, Items map snapshot. User xác nhận chung endpoint chạy; chưa có bằng chứng riêng Admin404 hoặc Customer403. Complete đã xong theo cập nhật17/11, không giao lại.
+- Khóa cấu hình: user viết HasOrderItemsAsync/exception/controller; service so sánh SKU, CategoryId, Brand, Color, SwitchType, Connectivity, IsHotSwappable sau chuẩn hóa và trước gán; chỉ chặn khi có thay đổi và có OrderItem. Không lọc trạng thái đơn, kể cả Cancelled vẫn khóa; giá/tên/mô tả/kho/trạng thái bán được sửa với RowVersion. Trợ lý cung cấp đoạn so sánh theo yêu cầu.
+- Bằng chứng Postman người dùng gửi: Product1 đổi White trả409 PRODUCT_CONFIGURATION_LOCKED; khôi phục Black và giá1600000 trả200, rowVersion785→786. User xác nhận đổi giá cửa hàng1700000 thành công; ảnh GET đơn1 trước/sau vẫn unitPrice1600000, quantity2, lineTotal/totalAmount3200000. Ảnh không trực tiếp hiển thị response PUT1700000, phần này là xác nhận người dùng. Không suy diễn đơn từng có giá1500000.
+- Product mới3/SKU TEST-CONFIG-001, được hướng dẫn không checkout: ảnh PUT đổi White trả200, response White, rowVersion789, stock10. Đây là bằng chứng response cập nhật; chưa có ảnh GET lại hoặc truy vấn DB riêng. Không coi toàn bộ 7 trường khóa hay race đã kiểm thử.
+- Đã giải thích snapshot chỉ chụp SKU/tên/giá, khóa cấu hình giữ danh tính SKU/kho và hoàn kho đúng loại; khóa từ checkout Pending, không đợi thanh toán. Học thêm mapping danh sách bằng Select, nullable status/Enum.IsDefined, ép long trước nhân offset, route GET/query string, RowVersion mới mỗi lần cập nhật.
+- Đã cập nhật learning-plan buổi14/22, giữ30 buổi/120 ID duy nhất. PersonalProgress đang chạy: đã tick và đọc lại day-14-build/day-22-build=true; các mục verify vẫn false vì thiếu kiểm chứng đã nêu. Đối chiếu xác nhận/timestamp khác: 0 thay đổi. Không rebuild tracker, không xóa volume.
+- Phiên sau: chuyển buổi23 kiểm thử mua hàng, bắt đầu bài race hai lần hủy cùng đơn Pending để chứng minh hoàn kho đúng một lần (dựa vào pattern CheckoutIntegrationTests đã học). Người dùng tự viết theo hướng dẫn, không tự viết hộ cả test nếu chưa được nhờ. Còn race hủy/Paid, checkout/cập nhật cấu hình, rollback cưỡng bức và các biên/phân quyền/vòng đời đã ghi; chốt phạm vi từng bài, không giao lại phần Admin GET/complete/khóa cấu hình đã xong.
+
+## Cập nhật 18/11 — danh sách và chi tiết đơn Admin
+
+- Người dùng viết GET /api/admin/orders, service validation/map và repository phân trang/lọc. Đã sửa query dùng chung BuildAdminOrdersQuery: chỉ lọc khi status có giá trị, lọc trước phân trang, count dùng cùng bộ lọc. Người dùng xác nhận “rồi ok rồi” sau hướng dẫn thử lại; chưa có bằng chứng riêng cho toàn bộ case phân trang, query sai và phân quyền.
+- Theo yêu cầu, trợ lý thêm GET /api/admin/orders/{id:int} chỉ Admin, repository AsNoTracking/Include Items tìm theo Id, service map OrderResponse từ snapshot OrderItems, không đọc Product hiện tại; đơn thiếu404, có đơn200. Bổ sung các hàm chuyển tiếp tương ứng trong wrapper CoordinateOrderRepository.
+- Build mới sau thêm chi tiết Admin thành công 0 warning/0 error. Chưa chạy HTTP hoặc test tự động cho chi tiết Admin. Tiếp theo rebuild API và thử Admin đọc đơn200, ID thiếu404, Customer403; sau đó học khóa cấu hình Product có OrderItem. Không commit.
+
+Cập nhật nội dung tiến độ: 18/11/2026 (Asia/Saigon).
 
 ## Cập nhật 17/11 — đã nối Customer xác nhận nhận hàng
 

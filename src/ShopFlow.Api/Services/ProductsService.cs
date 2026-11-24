@@ -275,6 +275,20 @@ public class ProductsService
         foreach (var connection in request.Connectivity)
             connectivity |= connection;
 
+        bool configurationChanged =
+            product.Sku != sku ||
+            product.CategoryId != request.CategoryId ||
+            product.Brand != brand ||
+            product.Color != color ||
+            product.SwitchType != request.SwitchType ||
+            product.Connectivity != connectivity ||
+            product.IsHotSwappable != request.IsHotSwappable;
+
+        if (configurationChanged && await _productRepository.HasOrderItemsAsync(id))
+        {
+            throw new ProductConfigurationLockedException();
+        }
+
         // Phiên bản Admin đã đọc trở thành điều kiện kiểm tra khi EF lưu.
         // Required đã bảo đảm RowVersion có giá trị ở bước validation phía trên.
         _productRepository.SetOriginalRowVersion(product, request.RowVersion!.Value);
@@ -309,4 +323,6 @@ public class ProductsService
         await _productRepository.SaveChangAsync();
         return true;
     }
+
+
 }

@@ -117,6 +117,30 @@ public class OrderService
         };
     }
 
+    public async Task<OrderResponse?> GetByIdForAdminAsync(int id)
+    {
+        var order = await _orderRepository.GetByIdForAdminAsync(id);
+        if (order == null) return null;
+
+        return new OrderResponse
+        {
+            Id = order.Id,
+            Status = order.Status.ToString(),
+            ShippingAddress = order.ShippingAddress,
+            TotalAmount = order.TotalAmount,
+            CreatedAt = order.CreatedAt,
+            Items = order.Items.OrderBy(item => item.Id).Select(item => new OrderItemResponse
+            {
+                ProductId = item.ProductId,
+                Sku = item.Sku,
+                ProductName = item.ProductName,
+                UnitPrice = item.UnitPrice,
+                Quantity = item.Quantity,
+                LineTotal = item.UnitPrice * item.Quantity
+            }).ToList()
+        };
+    }
+
     private static bool IsConcurrencyConflict(Exception exception)
     {
         for (Exception? current = exception; current != null; current = current.InnerException)
@@ -343,5 +367,32 @@ public class OrderService
         {
             throw new OrderConcurrencyException(ex);
         }
+    }
+
+    public async Task<OrderListResponse> GetListForAdminAsync(int page, int size, OrderStatus? status)
+    {
+        if (page < 1) throw new ArgumentException("Trang yeu cau phai lon hon 1");
+        if (size < 1 || size > 100) throw new ArgumentException("Tong so trang phai trong khoang 1 den 100");
+        if (status.HasValue && !Enum.IsDefined(status.Value))
+            throw new ArgumentException("Trạng thái đơn hàng không hợp lệ.");
+
+        if ((long)(page - 1) * size > int.MaxValue) throw new ArgumentException("Trang yeu cau vuot qua gioi han cho phep");
+
+        var totalCount = await _orderRepository.CountForAdminAsync(status);
+        var order = await _orderRepository.GetPageForAdminAsync(page, size, status);
+
+        return new OrderListResponse
+        {
+            Page = page,
+            Size = size,
+            TotalCount = totalCount,
+            Items = order.Select(order => new OrderSummaryResponse
+            {
+                Id = order.Id,
+                Status = order.Status.ToString(),
+                TotalAmount = order.TotalAmount,
+                CreatedAt = order.CreatedAt
+            }).ToList()
+        };
     }
 }

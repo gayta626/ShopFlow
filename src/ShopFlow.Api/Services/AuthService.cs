@@ -111,5 +111,43 @@ public class AuthService
         return response;
     }
 
+    public async Task<LoginUserResponse?> GetProfileAsync(int userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null) return null;
+
+        return new LoginUserResponse
+        {
+            Id = user.Id,
+            Email = user.Email,
+            FullName = user.FullName,
+            Role = user.Role.ToString()
+        };
+    }
+
+    public async Task<LoginUserResponse?> UpdateProfile(int userId, UpdateProfileRequest request)
+    {
+        var email = request.Email.Trim();
+        var fullName = request.FullName.Trim();
+        if (string.IsNullOrWhiteSpace(email) || email.Length > 254)
+            throw new ArgumentException("Email không được để trống và không quá 254 ký tự.");
+        if (fullName.Length < 2 || fullName.Length > 100) throw new ArgumentException("Ho ten phai dai tu 2 den 100 ky tu");
+        var normalizedEmail = email.ToLowerInvariant();
+        var existingUser = await _userRepository.GetByNormalizedEmailAsync(normalizedEmail);
+        if (existingUser != null && existingUser.Id != userId) throw new EmailAlreadyExistsException();
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null) return null;
+        user.Email = email;
+        user.NormalizedEmail = normalizedEmail;
+        user.FullName = fullName;
+        await _userRepository.SaveChangeAsync();
+        return new LoginUserResponse
+        {
+            Id = user.Id,
+            Email = email,
+            FullName = fullName,
+            Role = user.Role.ToString()
+        };
+    }
 
 }

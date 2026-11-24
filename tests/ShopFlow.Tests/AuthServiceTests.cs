@@ -105,6 +105,11 @@ public class AuthServiceTests
                 normalizedEmail == _user.NormalizedEmail ? _user : null); // Chỉ trả user khi email khớp.
         }
 
+        public Task<User?> GetByIdAsync(int userId)
+        {
+            return Task.FromResult<User?>(_user.Id == userId ? _user : null);
+        }
+
         public void Add(User user)
         {
             throw new NotSupportedException("Test đăng nhập không được thêm user mới."); // Báo lỗi nếu gọi nhầm Add.

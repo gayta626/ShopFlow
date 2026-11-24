@@ -92,6 +92,14 @@ public class AdminProductsController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (ProductConfigurationLockedException ex)
+        {
+            return Conflict(new
+            {
+                code = "PRODUCT_CONFIGURATION_LOCKED",
+                message = ex.Message
+            });
+        }
     }
 
     [HttpGet("{id:int}")]

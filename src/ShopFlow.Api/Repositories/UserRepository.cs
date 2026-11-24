@@ -41,4 +41,10 @@ public class UserRepository : IUserRepository
         }
     }
 
+    public async Task<User?> GetByIdAsync(int userId)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(user => user.Id == userId);
+        return user;
+    }
+
 }

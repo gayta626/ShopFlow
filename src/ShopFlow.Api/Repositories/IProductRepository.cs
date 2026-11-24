@@ -29,4 +29,5 @@ public interface IProductRepository
     public Task<bool> IsSkuExited(string sku, int productId);
 
     public void SetOriginalRowVersion(Product product, uint rowVersion);
+    public Task<bool> HasOrderItemsAsync(int productId);
 }

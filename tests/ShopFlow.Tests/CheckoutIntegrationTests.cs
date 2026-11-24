@@ -11,6 +11,7 @@ namespace ShopFlow.Tests;
 
 
 
+[Collection("PostgreSQL")]
 public class CheckoutIntegrationTests
 {
 
@@ -264,6 +265,11 @@ public class CheckoutIntegrationTests
             return _inner.GetByIdForUserAsync(id, userId);
         }
 
+        public Task<Order?> GetByIdForAdminAsync(int id)
+        {
+            return _inner.GetByIdForAdminAsync(id);
+        }
+
         public Task<Order?> GetOrderForUpdateAsync(int orderId, int userId)
         {
             return _inner.GetOrderForUpdateAsync(orderId, userId);
@@ -282,6 +288,16 @@ public class CheckoutIntegrationTests
         public Task<List<Order>> GetPageForUserAsync(int userId, int page, int size, OrderStatus? status)
         {
             return _inner.GetPageForUserAsync(userId, page, size, status);
+        }
+
+        public Task<int> CountForAdminAsync(OrderStatus? status)
+        {
+            return _inner.CountForAdminAsync(status);
+        }
+
+        public Task<List<Order>> GetPageForAdminAsync(int page, int size, OrderStatus? status)
+        {
+            return _inner.GetPageForAdminAsync(page, size, status);
         }
 
         public void Add(Order order)

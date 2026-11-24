@@ -3,6 +3,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using ShopFlow.Api.Data;
+using ShopFlow.Api.Dtos.Orders;
 using ShopFlow.Api.Entities;
 
 namespace ShopFlow.Api.Repositories;
@@ -58,6 +59,13 @@ public class OrderRepository : IOrderRepository
             .Include(order => order.Items)
             .FirstOrDefaultAsync(order => order.Id == id && order.UserId == userId);
     }
+    public Task<Order?> GetByIdForAdminAsync(int id)
+    {
+        return _db.Orders.AsNoTracking()
+            .Include(order => order.Items)
+            .FirstOrDefaultAsync(order => order.Id == id);
+    }
+
     private IQueryable<Order> BuildUserOrdersQuery(int userId, OrderStatus? status)
     {
         var query = _db.Orders
@@ -107,5 +115,37 @@ public class OrderRepository : IOrderRepository
 
         if (order == null) return null;
         return order;
+    }
+
+    public async Task<int> CountForAdminAsync(OrderStatus? status)
+    {
+        int totalAmount = await BuildAdminOrdersQuery(status).CountAsync();
+
+        return totalAmount;
+    }
+
+    public async Task<List<Order>> GetPageForAdminAsync(int page, int size, OrderStatus? status)
+    {
+        var order = await BuildAdminOrdersQuery(status)
+            .OrderByDescending(order => order.CreatedAt)
+            .ThenByDescending(order => order.Id)
+            .Skip((page - 1) * size)
+            .Take(size)
+            .ToListAsync();
+
+
+        return order;
+    }
+
+    private IQueryable<Order> BuildAdminOrdersQuery(OrderStatus? status)
+    {
+        var query = _db.Orders.AsNoTracking();
+
+        if (status.HasValue)
+        {
+            query = query.Where(order => order.Status == status);
+        }
+        return query;
+
     }
 }

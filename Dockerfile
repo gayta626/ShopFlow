@@ -5,7 +5,7 @@ COPY src/ShopFlow.Api/ShopFlow.Api.csproj src/ShopFlow.Api/
 RUN dotnet restore src/ShopFlow.Api/ShopFlow.Api.csproj
 
 COPY src/ShopFlow.Api/ src/ShopFlow.Api/
-RUN dotnet publish src/ShopFlow.Api/ShopFlow.Api.csproj -c Release -o /app/publish --no-restore
+RUN --mount=type=secret,id=sixlabors_license,required=true dotnet publish src/ShopFlow.Api/ShopFlow.Api.csproj -c Release -o /app/publish --no-restore -p:SixLaborsLicenseFile=/run/secrets/sixlabors_license
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app

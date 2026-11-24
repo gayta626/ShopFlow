@@ -20,6 +20,8 @@ public class ShopFlowDbContext : DbContext
 
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
+
+    public DbSet<ProductImage> ProductImages { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -75,6 +77,27 @@ public class ShopFlowDbContext : DbContext
             entity.HasOne(p => p.Category)
                   .WithMany(c => c.Products)
                   .HasForeignKey(p => p.CategoryId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ProductImage>(entity =>
+        {
+            entity.ToTable("ProductImages", table =>
+            {
+                table.HasCheckConstraint("CK_ProductImages_SortOrder", "\"SortOrder\" >= 0");
+            });
+
+            entity.HasKey(image => image.Id);
+            entity.Property(image => image.FileName).IsRequired().HasMaxLength(100);
+            entity.Property(image => image.AltText).IsRequired().HasMaxLength(200);
+            entity.Property(image => image.SortOrder).IsRequired();
+
+            entity.HasIndex(image => image.FileName).IsUnique();
+            entity.HasIndex(image => new { image.ProductId, image.SortOrder });
+
+            entity.HasOne(image => image.Product)
+                  .WithMany(product => product.Images)
+                  .HasForeignKey(image => image.ProductId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

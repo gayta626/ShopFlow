@@ -163,4 +163,11 @@ public class ProductRepository : IProductRepository
         // Ghi lại Name hiện tại bảo đảm EF thực thi UPDATE có điều kiện RowVersion.
         _db.Entry(product).Property(p => p.Name).IsModified = true;
     }
+
+    public async Task<bool> HasOrderItemsAsync(int productId)
+    {
+        var product = await _db.OrderItems.Where(p => p.ProductId == productId).AnyAsync();
+
+        return product;
+    }
 }

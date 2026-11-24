@@ -4,7 +4,11 @@
 ## Get latest from `dotnet new gitignore`
 
 # dotenv files
+sixlabors.lic
 .env
+web/node_modules/
+web/dist/
+web/.env.local
 
 # User-specific files
 *.rsuser

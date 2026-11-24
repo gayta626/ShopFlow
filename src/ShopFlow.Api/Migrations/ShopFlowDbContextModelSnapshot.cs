@@ -298,6 +298,43 @@ namespace ShopFlow.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ShopFlow.Api.Entities.ProductImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AltText")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileName")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "SortOrder");
+
+                    b.ToTable("ProductImages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductImages_SortOrder", "\"SortOrder\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("ShopFlow.Api.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -416,6 +453,17 @@ namespace ShopFlow.Api.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("ShopFlow.Api.Entities.ProductImage", b =>
+                {
+                    b.HasOne("ShopFlow.Api.Entities.Product", "Product")
+                        .WithMany("Images")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("ShopFlow.Api.Entities.Cart", b =>
                 {
                     b.Navigation("Items");
@@ -429,6 +477,11 @@ namespace ShopFlow.Api.Migrations
             modelBuilder.Entity("ShopFlow.Api.Entities.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ShopFlow.Api.Entities.Product", b =>
+                {
+                    b.Navigation("Images");
                 });
 
             modelBuilder.Entity("ShopFlow.Api.Entities.User", b =>

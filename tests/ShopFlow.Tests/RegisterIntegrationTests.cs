@@ -13,6 +13,7 @@ using ShopFlow.Api.Exceptions;
 
 namespace ShopFlow.Tests;
 
+[Collection("PostgreSQL")]
 public class RegisterIntegrationTests
 {
     [Fact]
@@ -109,6 +110,8 @@ public class RegisterIntegrationTests
             await gate.WaitForBothAsync(); // Không cho service nào lưu trước khi cả hai truy vấn hoàn tất.
             return LookupResult;
         }
+
+        public Task<User?> GetByIdAsync(int userId) => inner.GetByIdAsync(userId);
 
         public void Add(User user) => inner.Add(user);
 

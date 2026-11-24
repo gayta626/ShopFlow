@@ -8,4 +8,6 @@ public interface IUserRepository
     void Add(User user);
 
     Task<int> SaveChangeAsync();
+
+    public Task<User?> GetByIdAsync(int userId);
 }

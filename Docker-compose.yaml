@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      secrets:
+        - sixlabors_license
     image: shopflow-api:dev
     environment:
       ConnectionStrings__DefaultConnection: 'Host=db;Port=5432;Database="${POSTGRES_DB:?Can dat POSTGRES_DB}";Username="${POSTGRES_USER:?Can dat POSTGRES_USER}";Password="${POSTGRES_PASSWORD:?Can dat POSTGRES_PASSWORD}"'
@@ -49,3 +51,7 @@ services:
 
 volumes:
   postgres-data:
+
+secrets:
+  sixlabors_license:
+    file: ./src/ShopFlow.Api/sixlabors.lic
