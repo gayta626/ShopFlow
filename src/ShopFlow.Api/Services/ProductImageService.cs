@@ -69,4 +69,16 @@ public class ProductImageService
             SortOrder = image.SortOrder
         };
     }
+
+    public async Task<bool> DeleteAsync(int productId , int ImageId ,CancellationToken cancellationToken){
+        cancellationToken.ThrowIfCancellationRequested();
+        var image = await _productImageRepository.GetByIdAsync(productId, ImageId);
+        if(image == null) return false;
+
+         _productImageRepository.Remove(image);
+        await _productImageRepository.SaveChangeAsync();
+        await _productImageStorage.DeleteAsync(image.FileName, CancellationToken.None);
+
+        return true;
+    }
 }

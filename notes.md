@@ -1,5 +1,11 @@
 # ShopFlow — Tiến độ và bàn giao
 
+## Kết phiên 25/11/2026 — API Admin upload và xóa ảnh
+
+- Đã nối DI và hai action Admin. POST nhận ảnh từ form, trả 201 kèm metadata khi thành công. DELETE tìm theo cả productId và imageId, lưu việc xóa metadata trước khi dọn file với CancellationToken.None, trả 204 khi thành công hoặc 404 khi thiếu ảnh.
+- Compose gắn volume product-images vào /app/App_Data/product-images; Dockerfile chuẩn bị quyền ghi cho user API. Build Debug kết phiên thành công, 0 lỗi và 1 cảnh báo license Six Labors. Compose config hợp lệ. Chưa thử HTTP, quyền ghi hoặc giữ ảnh sau khi tạo lại container.
+- Phiên sau: đặt lại file license cục bộ tại src/ShopFlow.Api/sixlabors.lic, rebuild API Docker rồi thử Admin POST 201 → DELETE 204 → DELETE lại 404 bằng ảnh thử. Sau đó làm URL đọc ảnh và nối gallery/frontend. Tracker localhost:8091 chưa truy cập được; không có mục mới đủ bằng chứng để tick.
+
 ## Cập nhật 24/11/2026 — repository và service upload ảnh
 
 - User đã viết IProductImageRepository/ProductImageRepository: đọc danh sách theo ProductId, AsNoTracking, SortOrder/Id tăng dần; tìm ảnh theo cả ProductId/Id có tracking; Add/Remove/SaveChangeAsync. Đã đọc code và build pass trong lượt check.

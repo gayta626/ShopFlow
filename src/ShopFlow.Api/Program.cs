@@ -62,6 +62,9 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
+builder.Services.AddScoped<IProductImageStorage, LocalProductImageStorage>();
+builder.Services.AddScoped<ProductImageService>();
 var app = builder.Build();
 
 if (args.Contains("--seed"))

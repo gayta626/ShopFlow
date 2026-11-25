@@ -11,6 +11,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 COPY --from=build /app/publish .
+RUN mkdir -p /app/App_Data/product-images && chown "$APP_UID" /app/App_Data/product-images
 
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080

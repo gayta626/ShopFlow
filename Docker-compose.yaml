@@ -6,6 +6,8 @@ services:
       secrets:
         - sixlabors_license
     image: shopflow-api:dev
+    volumes:
+      - product-images:/app/App_Data/product-images
     environment:
       ConnectionStrings__DefaultConnection: 'Host=db;Port=5432;Database="${POSTGRES_DB:?Can dat POSTGRES_DB}";Username="${POSTGRES_USER:?Can dat POSTGRES_USER}";Password="${POSTGRES_PASSWORD:?Can dat POSTGRES_PASSWORD}"'
       Jwt__Key: "${JWT_KEY:?Can dat JWT_KEY}"
@@ -51,6 +53,7 @@ services:
 
 volumes:
   postgres-data:
+  product-images:
 
 secrets:
   sixlabors_license:

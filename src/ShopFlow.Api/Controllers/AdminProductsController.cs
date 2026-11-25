@@ -16,10 +16,12 @@ namespace ShopFlow.Api.Controllers;
 public class AdminProductsController : ControllerBase
 {
     private readonly ProductsService _productsService;
+    private readonly ProductImageService _productImageService;
 
-    public AdminProductsController(ProductsService productsService)
+    public AdminProductsController(ProductsService productsService, ProductImageService productImageService)
     {
         _productsService = productsService;
+        _productImageService = productImageService;
     }
     [HttpPost]
     public async Task<IActionResult> CreateProduct([FromBody] CreateProductRequest request)
@@ -146,6 +148,34 @@ public class AdminProductsController : ControllerBase
                 code = "CONCURRENCY_CONFLICT",
                 message = ex.Message
             });
+        }
+    }
+
+    [HttpDelete("{productId:int}/images/{imageId:int}")]
+    public async Task<IActionResult> DeleteAsync(int productId, int imageId, CancellationToken cancellationToken)
+    {
+        var deleted = await _productImageService.DeleteAsync(productId, imageId, cancellationToken);
+        if (!deleted) return NotFound();
+
+        return NoContent();
+    }
+
+    [HttpPost("{productId:int}/images")]
+
+    public async Task<IActionResult> UploadAsync([FromRoute] int productId, [FromForm] IFormFile file, CancellationToken cancellationToken, [FromForm] string? altText = null, [FromForm] int sortOrder = 0)
+    {
+        try
+        {
+            var image = await _productImageService.UploadAsync(
+                productId, file, altText, sortOrder, cancellationToken);
+
+            if (image == null) return NotFound();
+
+            return StatusCode(StatusCodes.Status201Created, image);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 

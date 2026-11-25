@@ -815,19 +815,19 @@
         "id": "day-26-build",
         "title": "Thực hành",
         "minutes": 90,
-        "description": "Đã nối /admin/products, /admin/orders và /admin/categories CRUD với xác nhận đổi tên/lỗi danh mục đang dùng. Phần UI cơ bản xong; backend ảnh có entity/migration và local storage, chưa repository/service/controller upload hoặc FE upload."
+        "description": "Đã nối UI Admin sản phẩm, đơn và danh mục. Backend ảnh đã có repository, storage, service, DI, API Admin upload/xóa và cấu hình volume. Còn URL đọc ảnh và nối frontend."
       },
       {
         "id": "day-26-verify",
         "title": "Kiểm chứng và sửa lỗi",
         "minutes": 75,
-        "description": "23/11 Admin danh mục pass mock validation/confirmRename/conflict/quyền/responsive; storage 9/9 test lịch sử. 24/11 build solution và React pass, API Release/publish nhận license. Chưa E2E Admin thật, chưa Docker build do engine tắt."
+        "description": "23/11 Admin danh mục pass mock và storage pass 9/9. Ngày 25/11 build Debug pass với cảnh báo thiếu license, Compose config hợp lệ. Chưa chạy Docker bản mới hoặc kiểm thử HTTP upload/xóa."
       },
       {
         "id": "day-26-review",
         "title": "Tổng kết",
         "minutes": 30,
-        "description": "Notes bàn giao: tiếp theo IProductImageRepository/ProductImageRepository, rồi nghiệp vụ upload/xóa ảnh, DI, URL và volume. Chưa tick verify/review khi thiếu kiểm chứng thật/tự giải thích."
+        "description": "Khôi phục license cục bộ, rebuild API rồi thử Admin upload 201, xóa 204 và xóa lại 404. Sau đó nối URL và gallery. Kiểm chứng thực tế và tự giải thích còn mở."
       }
     ]
   },
